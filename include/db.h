@@ -16,8 +16,8 @@ struct page_header {
 //таблица это массив страниц
 struct page {
     struct page_header* page_header;
-    void* start_free_space;
-    void* end_free_space;
+    char* start_free_space;
+    char* end_free_space;
     struct page* next_page; //связный список
 };
 

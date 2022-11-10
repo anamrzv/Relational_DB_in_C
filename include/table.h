@@ -3,27 +3,36 @@
 
 #include <inttypes.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <malloc.h>
 
 #define MAX_NAME_LEN 20
 #define MAX_DATATYPE_LEN 10
-#define INITIAL_ARRAY_SIZE 1
+#define DEFAULT_STRING_LENGTH 255
 
-typedef enum data_type data_type;
+enum data_type {
+    TYPE_INT32 = 0,
+    TYPE_BOOL,
+    TYPE_STRING,
+    TYPE_FLOAT
+};
 
 struct column {
     char name[MAX_NAME_LEN];
-    data_type type;
+    enum data_type column_type;
     uint16_t size;
 };
 
 struct table_schema {
-    struct column columns[INITIAL_ARRAY_SIZE];    
+    uint64_t column_count;
+    struct column* columns;  //указатель на начало массива
 };
 
 struct table_header {
     char name[MAX_NAME_LEN];
     struct database* db;
-    uint16_t column_count;
     uint64_t row_count;
 };
 
@@ -34,17 +43,13 @@ struct table {
     struct page* current_page; //место где остановились и свободно для записи   
 };
 
-enum data_type {
-    TYPE_INT32 = 0,
-    TYPE_BOOL,
-    TYPE_STRIN,
-    TYPE_FLOAT
-};
-
 struct resultset {
     uint64_t length;
-    void* cursor; //указатель на начало данных
+    char* cursor; //указатель на начало данных
 };
 
+struct table_schema* create_table_schema();
+struct table_schema* add_column_to_schema(struct table_schema* schema, const char* column_name, enum data_type type);
+void increase_columns_array(struct table_schema* schema);
 
 #endif
