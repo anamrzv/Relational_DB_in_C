@@ -21,5 +21,9 @@ int main(int argc, char** argv)
         printf("%s ", first_schema->columns[i].name);
     } 
 
+    first_schema = delete_column_from_schema(first_schema, "age");
+
+    destroy_column_list(first_schema->columns);
+    free(first_schema);
     return 0;
 }

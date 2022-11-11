@@ -23,11 +23,12 @@ struct column {
     char name[MAX_NAME_LEN];
     enum data_type column_type;
     uint16_t size;
+    struct column* next;
 };
 
 struct table_schema {
     uint64_t column_count;
-    struct column* columns;  //указатель на начало массива
+    struct column* columns;  //указатель на начало св. списка
 };
 
 struct table_header {
@@ -48,8 +49,16 @@ struct resultset {
     char* cursor; //указатель на начало данных
 };
 
+bool column_exists(const struct column* column_list, const size_t len, const char* name);
+size_t column_list_length(const struct column* column_list);
+void destroy_column_list(struct column* column_list);
+struct column* column_list_last(struct column* column_list);
+void add_back_column(struct column** old, const char* column_name, enum data_type column_type);
+struct column* delete_column_from_list(struct column* cur, const char* column_name);
+struct column* create_column(const char* column_name, enum data_type column_type );
 struct table_schema* create_table_schema();
-struct table_schema* add_column_to_schema(struct table_schema* schema, const char* column_name, enum data_type type);
-void increase_columns_array(struct table_schema* schema);
+struct table_schema* add_column_to_schema(struct table_schema* schema, const char* column_name, enum data_type column_type);
+struct table_schema* delete_column_from_schema(struct table_schema* schema, const char* column_name);
+
 
 #endif
