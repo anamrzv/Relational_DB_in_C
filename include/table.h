@@ -35,11 +35,17 @@ struct table_schema {
 struct table_header {
     char name[MAX_NAME_LEN];
     struct database* db;
+    struct table* table;
     uint64_t row_count;
 
-    uint32_t page_count;
+    uint32_t page_count; //количество страниц в таблице
     struct page* starting_page; //начало записей aka первая страница
-    struct page* current_page; //место где остановились и свободно для записи   
+    struct page* current_page; //место где остановились и свободно для записи  
+
+    struct table_header* next; 
+
+    uint32_t number_in_tech_page;
+    bool valid;
 };
 
 struct table {

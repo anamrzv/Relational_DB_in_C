@@ -18,5 +18,8 @@ int main(int argc, char** argv)
 
     destroy_column_list(first_schema->columns);
     free(first_schema);
+    free(my_db->database_header->first_page);
+    free(&my_db->database_header);
+    free(my_db);
     return 0;
 }

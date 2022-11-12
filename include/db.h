@@ -7,7 +7,7 @@
 #include "../include/table.h"
 
 #define MAX_DB_NAME_LEN 50
-#define DEFAULT_PAGE_SIZE_KB 4096
+#define DEFAULT_PAGE_SIZE_B 4096
 
 enum database_type {
     EXISTING = 0,
@@ -23,9 +23,10 @@ struct page_header {
 };
 
 //таблица это массив страниц
+//TODO добавить номер страницы для быстрого перехода
 struct page {
-    struct page_header page_header;
-    char* free_space_cursor; //курсор там где можно писать
+    struct page_header* page_header;
+    char* free_space_cursor; //курсор там где можно писать, изначально это начало страницы
     struct page* next; //связный список
 };
 
@@ -34,23 +35,26 @@ struct database_header {
     uint32_t table_count;
     uint32_t page_count;
 
-    uint32_t page_size; //по умолчанию 8 байт, проверить тип данных
+    uint32_t page_size; //по умолчанию 4 байт, проверить тип данных
     
-    struct page* first_page;
-    struct page* current_page; //свободная страница или где стоит курсор
-    char* cursor; //курсор в current page
+    struct page* first_page; //служебная страница
+    struct table_header* next;
 };
 
 struct database {
-    struct database_header database_header;
+    struct database_header* database_header;
     FILE* database_file;
 };
 
 struct page* create_page(struct database_header* db_header, struct table_header* table_header);
+void destroy_table_page_list(struct page* page_list);
 void add_page_back_to_db_header_list(struct database_header* db_header);
+void add_page_back_to_table_header_list(struct table_header* table_header);
 struct database* get_prepared_database(const char *const filename, const enum database_type type);
 struct database* create_database_in_file(const char *const filename);
 struct database* get_database_from_file(const char *const filename);
+struct table* create_table_from_schema(struct table_schema* schema, const char* table_name, struct database* db);
+void delete_table(const char* table_name, struct database* db);
 
 
 #endif

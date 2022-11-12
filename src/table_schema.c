@@ -14,16 +14,6 @@ bool column_exists(const struct column* column_list, const size_t len, const cha
     else return false;
 }
 
-// size_t column_list_length(const struct column* column_list) {
-//     size_t s = 0;
-//     const struct column* pointer = column_list;
-//     while (pointer!=NULL){
-//         s++;
-//         pointer=pointer->next;
-//     }
-//     return s;
-// }
-
 void destroy_column_list(struct column* column_list) {
     struct column* next;
     struct column* cur=column_list;
@@ -33,16 +23,6 @@ void destroy_column_list(struct column* column_list) {
         cur = next;
     }
 }
-
-// struct column* column_list_last(struct column* column_list) {
-//     struct column* cur = column_list;
-//     if (cur!=NULL) {
-//         while (cur->next!=NULL) {
-//         cur=cur->next;
-//         }
-//     }
-//     return cur;
-// }
 
 void add_back_column_to_list(struct table_schema* schema, const char* column_name, enum data_type column_type) {
     struct column* new_column = create_column(column_name, column_type);
@@ -129,6 +109,3 @@ struct table_schema* delete_column_from_schema(struct table_schema* schema, cons
     return schema;
 }
 
-// struct table* create_table_from_schema(struct table_schema* schema) {
-
-// }

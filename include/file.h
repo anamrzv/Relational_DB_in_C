@@ -5,6 +5,7 @@
 #include "../include/db.h"
 
 struct database_header;
+struct page;
 
 enum open_status  {
   OPEN_OK = 0,
@@ -24,7 +25,7 @@ enum write_status {
 
 enum open_status open_file(FILE **in, const char *const filename, const char *const mode);
 enum close_status close_file(FILE *in);
-enum write_status write_header_to_db_file(FILE *file, struct database_header* db_header);
-
+enum write_status write_header_to_tech_page(FILE *file, struct page* tech_page, struct page* table_page);
+enum write_status overwrite_after_table_delete(FILE *file, struct table_header* deleted_table_header, struct table_header* left_neighnour_header, struct database_header* db_header);
 
 #endif
