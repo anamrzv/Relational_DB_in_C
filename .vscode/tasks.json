@@ -8,7 +8,9 @@
                 "-fdiagnostics-color=always",
                 "-g",
                 "${file}",
-                "${fileDirname}\\table.c",
+                "${fileDirname}\\table_schema.c",
+                "${fileDirname}\\file.c",
+                "${fileDirname}\\db.c",
                 "-o",
                 "${fileDirname}\\${fileBasenameNoExtension}.exe"
             ],

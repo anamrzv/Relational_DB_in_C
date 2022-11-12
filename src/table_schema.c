@@ -14,15 +14,15 @@ bool column_exists(const struct column* column_list, const size_t len, const cha
     else return false;
 }
 
-size_t column_list_length(const struct column* column_list) {
-    size_t s = 0;
-    const struct column* pointer = column_list;
-    while (pointer!=NULL){
-        s++;
-        pointer=pointer->next;
-    }
-    return s;
-}
+// size_t column_list_length(const struct column* column_list) {
+//     size_t s = 0;
+//     const struct column* pointer = column_list;
+//     while (pointer!=NULL){
+//         s++;
+//         pointer=pointer->next;
+//     }
+//     return s;
+// }
 
 void destroy_column_list(struct column* column_list) {
     struct column* next;
@@ -34,28 +34,26 @@ void destroy_column_list(struct column* column_list) {
     }
 }
 
-struct column* column_list_last(struct column* column_list) {
-    struct column* cur = column_list;
-    if (cur!=NULL) {
-        while (cur->next!=NULL) {
-        cur=cur->next;
-        }
-    }
-    return cur;
-}
+// struct column* column_list_last(struct column* column_list) {
+//     struct column* cur = column_list;
+//     if (cur!=NULL) {
+//         while (cur->next!=NULL) {
+//         cur=cur->next;
+//         }
+//     }
+//     return cur;
+// }
 
-void add_back_column(struct column** old, const char* column_name, enum data_type column_type) {
+void add_back_column_to_list(struct table_schema* schema, const char* column_name, enum data_type column_type) {
     struct column* new_column = create_column(column_name, column_type);
-    if (*old!=NULL) {
-        struct column* last_column = column_list_last(*old);
-        last_column->next = new_column;
+    if (schema->last_column != NULL) {
+        schema->last_column->next = new_column;
     } 
-    else {
-        *old = new_column;
-    }
+    else schema->columns = new_column;
+    schema->last_column = new_column;
 }
 
-struct column* delete_column_from_list(struct column* cur, const char* column_name) {
+struct column* delete_column_from_list(struct column* cur, const char* column_name, struct table_schema* schema) {
     struct column* next;
     if (cur == NULL) {
         return NULL;
@@ -64,7 +62,8 @@ struct column* delete_column_from_list(struct column* cur, const char* column_na
         free(cur);
         return next;
     } else {
-        cur->next = delete_column_from_list(cur->next, column_name);
+        cur->next = delete_column_from_list(cur->next, column_name, schema);
+        if (cur->next == NULL) schema->last_column = cur;
         return cur;
     }
 }
@@ -76,7 +75,7 @@ struct column* create_column(const char* column_name, enum data_type column_type
     if (created_column == NULL) {
         return NULL;
     }
-    strncpy(created_column->name, "", 20);
+    strncpy(created_column->name, "", MAX_NAME_LEN);
     strncpy(created_column->name, column_name, strlen(column_name));
     created_column->column_type = column_type;
     switch (column_type) {
@@ -100,13 +99,14 @@ struct column* create_column(const char* column_name, enum data_type column_type
 struct table_schema* create_table_schema() {
     struct table_schema* schema = malloc(sizeof(struct table_schema));
     schema->columns = NULL;
+    schema->last_column = NULL;
     schema->column_count = 0;
     return schema;
 }
 
 struct table_schema* add_column_to_schema(struct table_schema* schema, const char* column_name, enum data_type column_type) {
     if (!column_exists(schema->columns, schema->column_count, column_name)) {
-        add_back_column(&schema->columns, column_name, column_type);
+        add_back_column_to_list(schema, column_name, column_type);
     } else {
         printf("Колонка с таким названием уже существует");
         return schema;
@@ -118,7 +118,7 @@ struct table_schema* add_column_to_schema(struct table_schema* schema, const cha
 
 struct table_schema* delete_column_from_schema(struct table_schema* schema, const char* column_name) {
     if (column_exists(schema->columns, schema->column_count, column_name)) {
-        struct column* new_column_list = delete_column_from_list(schema->columns, column_name);
+        struct column* new_column_list = delete_column_from_list(schema->columns, column_name, schema);
         schema->columns = new_column_list;
     } else {
         printf("Колонки с таким названием не существует");
@@ -129,4 +129,6 @@ struct table_schema* delete_column_from_schema(struct table_schema* schema, cons
     return schema;
 }
 
+// struct table* create_table_from_schema(struct table_schema* schema) {
 
+// }
