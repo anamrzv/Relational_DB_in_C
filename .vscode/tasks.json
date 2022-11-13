@@ -9,6 +9,7 @@
                 "-g",
                 "${file}",
                 "${fileDirname}\\table_schema.c",
+                "${fileDirname}\\table_content.c",
                 "${fileDirname}\\file.c",
                 "${fileDirname}\\db.c",
                 "-o",

@@ -9,6 +9,8 @@
 #define MAX_DB_NAME_LEN 50
 #define DEFAULT_PAGE_SIZE_B 4096
 
+struct table_schema;
+
 enum database_type {
     EXISTING = 0,
     TO_BE_CREATED
@@ -18,20 +20,22 @@ struct page_header {
     struct table_header* table_header;
     struct database_header* database_header;
     uint16_t free_bytes;
-    uint32_t page_number;
+    uint32_t page_number_table; //номер страницы в общем списке страниц
+    uint32_t page_number_general;
     bool dirty;
+
+    uint32_t free_space_cursor; //offset курсор там где можно писать, изначально это начало страницы
+    struct page* next; //связный список - следюстраница этой таблицы
 };
 
-//таблица это массив страниц
-//TODO добавить номер страницы для быстрого перехода
 struct page {
     struct page_header* page_header;
-    uint32_t free_space_cursor; //offset курсор там где можно писать, изначально это начало страницы
-    struct page* next; //связный список
 };
 
 struct database_header {
     char name[MAX_DB_NAME_LEN];
+    struct database* db;
+
     uint32_t table_count;
     uint32_t page_count;
 

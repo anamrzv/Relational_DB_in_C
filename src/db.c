@@ -11,20 +11,25 @@ struct page* create_page(struct database_header* db_header, struct table_header*
     created_page_header->free_bytes = DEFAULT_PAGE_SIZE_B;
     
     if (db_header != NULL) {
-        created_page_header->page_number = db_header->page_count;
+        db_header->page_count += 1;
+
+        created_page_header->page_number_general = db_header->page_count;
+        created_page_header->page_number_table = db_header->page_count;
         created_page_header->database_header = db_header;
         created_page_header->table_header = NULL;
-        db_header->page_count += 1;
     } else if (table_header != NULL) {
-        created_page_header->page_number = table_header->page_count;
+        table_header->page_count += 1;
+        table_header->db->database_header->page_count += 1;
+
+        created_page_header->page_number_general = table_header->db->database_header->page_count;
+        created_page_header->page_number_table = table_header->page_count;
         created_page_header->table_header = table_header;
         created_page_header->database_header = NULL;
-        table_header->db->database_header->page_count += 1;
     } else return NULL;
     
     created_page->page_header = created_page_header;
-    created_page->next = NULL;
-    created_page->free_space_cursor = 0; //offset = 0
+    created_page->page_header->next = NULL;
+    created_page->page_header->free_space_cursor = 0; //offset = 0
 
     return created_page;
 }
@@ -33,7 +38,7 @@ void destroy_table_page_list(struct page* page_list) {
     struct page* next;
     struct page* cur=page_list;
     while (cur) {
-        next = cur->next;
+        next = cur->page_header->next;
         free(cur);
         cur = next;
     }
@@ -66,7 +71,7 @@ void add_page_back_to_table_header_list(struct table_header* table_header) {
     struct page* new_page = create_page(NULL, table_header);
     if (new_page != NULL) {
         if (table_header->current_page != NULL) {
-            table_header->current_page->next = new_page;
+            table_header->current_page->page_header->next = new_page;
         } else table_header->starting_page = new_page;
         table_header->current_page = new_page;
     }
@@ -105,6 +110,7 @@ struct database* create_database_in_file(const char *const filename) {
     db_header->first_page = NULL;
     db_header->next = NULL;
     db_header->last_table_header = NULL;
+    db_header->db = db;
     add_page_back_to_db_header_list(db_header); //служебная страница
 
     db->database_file = in;
@@ -119,7 +125,6 @@ struct database* get_database_from_file(const char *const filename) {
     //TODO
 }
 
-//TODO проверка что такого имени еще нет
 struct table* create_table_from_schema(struct table_schema* schema, const char* table_name, struct database* db) {
     if (table_exists(db->database_header->next, db->database_header->table_count, table_name)) {
         printf("Таблица с таким именем существует. Нельзя создать.");
@@ -133,7 +138,7 @@ struct table* create_table_from_schema(struct table_schema* schema, const char* 
     strncpy(table_header->name, table_name, strlen(table_name));
     table_header->db = db;
     table_header->row_count = 0;
-    table_header->page_count = 1;
+    table_header->page_count = 0;
     table_header->starting_page = NULL;
     table_header->current_page = NULL;
     table_header->next = NULL;
@@ -154,8 +159,8 @@ struct table* create_table_from_schema(struct table_schema* schema, const char* 
         db->database_header->last_table_header = table_header;
     }
     
-
     write_header_to_tech_page(db->database_file, db->database_header->first_page, table_header->current_page);
+    write_table_page_first_time(db->database_file, table_header->current_page);
 
     return created_table;
 }

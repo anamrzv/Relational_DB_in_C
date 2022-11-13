@@ -7,10 +7,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <malloc.h>
+#include "../include/file.h"
 
 #define MAX_NAME_LEN 20
 #define MAX_DATATYPE_LEN 10
-#define DEFAULT_STRING_LENGTH 255
 
 enum data_type {
     TYPE_INT32 = 0,
@@ -30,6 +30,8 @@ struct table_schema {
     uint64_t column_count;
     struct column* columns;  //указатель на начало св. списка
     struct column* last_column; //указатель на послежний элемнт списка колонок
+
+    uint64_t row_length;
 };
 
 struct table_header {
@@ -58,16 +60,35 @@ struct resultset {
     char* cursor; //указатель на начало данных
 };
 
-bool column_exists(const struct column* column_list, const size_t len, const char* name);
-//size_t column_list_length(const struct column* column_list);
+struct row_header {
+    bool valid;
+};
+
+struct row {
+    struct row_header* row_header;
+    struct table* table;
+    void** content;
+};
+
+uint32_t column_exists(const struct column* column_list, const size_t len, const char* name);
 void destroy_column_list(struct column* column_list);
-//struct column* column_list_last(struct column* column_list);
 void add_back_column_to_list(struct table_schema* schema, const char* column_name, enum data_type column_type);
+void add_back_string_column_to_list(struct table_schema* schema, const char* column_name, enum data_type column_type, uint16_t size);
 struct column* delete_column_from_list(struct column* cur, const char* column_name, struct table_schema* schema);
-struct column* create_column(const char* column_name, enum data_type column_type );
+struct column* create_column(const char* column_name, enum data_type column_type);
+struct column* create_string_column(const char* column_name, enum data_type column_type, uint16_t size);
 struct table_schema* create_table_schema();
 struct table_schema* add_column_to_schema(struct table_schema* schema, const char* column_name, enum data_type column_type);
+struct table_schema* add_string_column_to_schema(struct table_schema* schema, const char* column_name, enum data_type column_type, uint16_t size);
 struct table_schema* delete_column_from_schema(struct table_schema* schema, const char* column_name);
 
+struct row* create_row(struct table* table);
+void fill_with_int(struct row* row, int32_t value, uint32_t offset);
+void fill_with_bool(struct row* row, bool value, uint32_t offset);
+void fill_with_string(struct row* row, char* value, uint32_t offset, uint32_t string_len);
+void fill_with_float(struct row* row, double value, uint32_t offset);
+int32_t column_offset(const struct column* column_list, const size_t len, const char* name);
+void fill_row_attribute(struct row* row, const char* column_name, enum data_type column_type, void* value);
+void insert_row_to_table(struct row* row);
 
 #endif

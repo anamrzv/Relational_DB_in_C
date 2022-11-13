@@ -2,24 +2,31 @@
 #include "../include/table.h"
 #include "../include/db.h"
 
+
 int main(int argc, char** argv)
 {
     printf("Test");
 
     struct table_schema* first_schema = create_table_schema();
     first_schema = add_column_to_schema(first_schema, "age", TYPE_INT32);
-
     first_schema = add_column_to_schema(first_schema, "male", TYPE_BOOL);
-
-    first_schema = delete_column_from_schema(first_schema, "age");
-
-    first_schema = add_column_to_schema(first_schema, "age", TYPE_INT32);
+    first_schema = add_string_column_to_schema(first_schema, "name", TYPE_STRING, 20);
 
     struct database* my_db = get_prepared_database("db6.bin", TO_BE_CREATED);
 
     struct table* table1 = create_table_from_schema(first_schema, "table1", my_db);
     struct table* table2 = create_table_from_schema(first_schema, "table2", my_db);
 
+    struct row* row1 = create_row(table1);
+
+    uint32_t my_age = 20;
+    char* my_name = "Nastya";
+    bool my_sex = false;
+
+    fill_row_attribute(row1, "age", TYPE_INT32, (void*) &my_age);
+    fill_row_attribute(row1, "name", TYPE_STRING, (void*) &my_name);
+    fill_row_attribute(row1, "male", TYPE_BOOL, (void*) &my_sex);
+    insert_row_to_table(row1); 
 
     delete_table("table1", my_db);
     delete_table("table2", my_db);
