@@ -26,7 +26,7 @@ struct page_header {
 //TODO добавить номер страницы для быстрого перехода
 struct page {
     struct page_header* page_header;
-    char* free_space_cursor; //курсор там где можно писать, изначально это начало страницы
+    uint32_t free_space_cursor; //offset курсор там где можно писать, изначально это начало страницы
     struct page* next; //связный список
 };
 
@@ -38,7 +38,8 @@ struct database_header {
     uint32_t page_size; //по умолчанию 4 байт, проверить тип данных
     
     struct page* first_page; //служебная страница
-    struct table_header* next;
+    struct table_header* next; //первый табличный заголовок
+    struct table_header* last_table_header;
 };
 
 struct database {

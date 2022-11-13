@@ -6,6 +6,7 @@
 
 struct database_header;
 struct page;
+struct table_header;
 
 enum open_status  {
   OPEN_OK = 0,

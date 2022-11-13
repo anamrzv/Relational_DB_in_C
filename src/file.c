@@ -45,14 +45,16 @@ enum write_status write_header_to_tech_page(FILE *file, struct page* tech_page, 
 enum write_status overwrite_after_table_delete(FILE *file, struct table_header* deleted_table_header, struct table_header* left_neighnour_header, struct database_header* db_header) {
     if (db_header != NULL) {
         db_header->next = deleted_table_header->next;
+        if (db_header->next == NULL) db_header->last_table_header = NULL;
         fseek(file, 0, SEEK_SET);
         if (fwrite(db_header, sizeof(struct database_header), 1, file) == 1) {
-            fseek(file, sizeof(struct database_header), SEEK_SET);
+            fseek(file, sizeof(struct database_header) + (deleted_table_header->number_in_tech_page-1)*sizeof(struct table_header), SEEK_SET);
             if (fwrite(deleted_table_header, sizeof(struct table_header), 1, file) == 1) return WRITE_OK;
         }
         return WRITE_ERROR;
     } else {
         left_neighnour_header->next = deleted_table_header->next;
+        if (left_neighnour_header->next = NULL) db_header->last_table_header = left_neighnour_header;
         fseek(file, sizeof(struct database_header) + (left_neighnour_header->number_in_tech_page-1)*sizeof(struct table_header), SEEK_SET);
         if (fwrite(left_neighnour_header, sizeof(struct table_header), 1, file) == 1) {
             fseek(file, sizeof(struct table_header), SEEK_CUR); //CHECK
