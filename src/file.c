@@ -103,3 +103,15 @@ enum read_status read_database_header(FILE *file, struct database_header* db_hea
    if (fread(db_header, sizeof(struct database_header), 1, file) == 1) return READ_OK;
    else return READ_ERROR;
 }
+
+enum read_status read_table_header(FILE *file, const char *const tablename, struct table_header* read_th, size_t table_count) {
+    fseek(file, sizeof(struct database_header), SEEK_SET);
+    size_t cnt = 0;
+    while (cnt != table_count) {
+        if (fread(read_th, sizeof(struct table_header), 1, file) == 1) {
+            if (strcmp(tablename, read_th->name) == 0) return READ_OK;
+        } else return READ_ERROR;
+        cnt++;
+    }
+    return READ_ERROR;
+}

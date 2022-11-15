@@ -48,6 +48,9 @@ void read_db() {
     first_schema = add_string_column_to_schema(first_schema, "name", TYPE_STRING, 20);
 
     struct database* my_db = get_prepared_database("db.bin", EXISTING);
+    struct table* my_table = get_table("table2", my_db);
+    struct table* my_second_table = get_table("table1", my_db);
+
 }
 
 int main(int argc, char** argv)

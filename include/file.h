@@ -42,5 +42,6 @@ enum write_status write_table_page_first_time(FILE *file, struct page* page_to_w
 enum write_status write_row_to_page(FILE *file, struct page* page_to_write, struct row* row);
 
 enum read_status read_database_header(FILE *file, struct database_header* db_header);
+enum read_status read_table_header(FILE *file, const char *const tablename, struct table_header* read_th, size_t table_count);
 
 #endif

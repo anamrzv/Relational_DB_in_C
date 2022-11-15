@@ -41,6 +41,7 @@ struct table_header {
     uint64_t row_count;
 
     uint32_t page_count; //количество страниц в таблице
+
     struct page* starting_page; //начало записей aka первая страница
     struct page* current_page; //место где остановились и свободно для записи  
 
@@ -48,6 +49,9 @@ struct table_header {
 
     uint32_t number_in_tech_page;
     bool valid;
+
+    struct table_schema schema;
+    uint32_t first_page_general_number;
 };
 
 struct table {

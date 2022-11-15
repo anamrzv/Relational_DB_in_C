@@ -20,6 +20,8 @@ struct page* create_page(struct database_header* db_header, struct table_header*
 
         created_page_header->database_header = db_header;
         created_page_header->table_header = NULL;
+
+        strncpy(created_page_header->table_name, "", MAX_TABLE_NAME_LEN);
     } else if (table_header != NULL) {
         table_header->page_count += 1;
         table_header->db->database_header->page_count += 1;
@@ -28,11 +30,16 @@ struct page* create_page(struct database_header* db_header, struct table_header*
         created_page_header->page_number_table = table_header->page_count;
         created_page_header->table_header = table_header;
         created_page_header->database_header = NULL;
+
+        strncpy(created_page_header->table_name, "", MAX_TABLE_NAME_LEN);
+        strncpy(created_page_header->table_name, table_header->name, MAX_TABLE_NAME_LEN);
     } else return NULL;
     
+    created_page_header->next = NULL;
+    created_page_header->free_space_cursor = 0;
+    created_page_header->next_page_number_general = 0;
+
     created_page->page_header = created_page_header;
-    created_page->page_header->next = NULL;
-    created_page->page_header->free_space_cursor = 0; //offset = 0
 
     return created_page;
 }
@@ -67,6 +74,7 @@ struct page* add_page_back_to_db_header_list(struct database_header* db_header) 
         if (db_header->first_page == NULL) db_header->first_page = new_page;
         else {
             db_header->last_tech_page->page_header->next = new_page;
+            db_header->last_tech_page->page_header->next_page_number_general = new_page->page_header->page_number_general;
         }
         db_header->last_tech_page = new_page;
         return new_page;
@@ -78,7 +86,11 @@ struct page* add_page_back_to_table_header_list(struct table_header* table_heade
     if (new_page != NULL) {
         if (table_header->current_page != NULL) {
             table_header->current_page->page_header->next = new_page;
-        } else table_header->starting_page = new_page;
+            table_header->current_page->page_header->next_page_number_general = new_page->page_header->page_number_general;
+        } else {
+            table_header->starting_page = new_page;
+            table_header->first_page_general_number = new_page->page_header->page_number_general;
+        }
         table_header->current_page = new_page;
         return new_page;
     }
@@ -175,6 +187,8 @@ struct table* create_table_from_schema(struct table_schema* schema, const char* 
     table_header->next = NULL;
     table_header->valid = true;
     table_header->table = created_table;
+    table_header->schema = *schema;
+    table_header->first_page_general_number = 0;
 
     add_page_back_to_table_header_list(table_header);
     created_table->table_header = table_header;
@@ -235,3 +249,18 @@ bool enough_free_space(struct page* page, uint32_t desired_volume) {
 void close_database(struct database* db) {
     close_file(db->database_file);
 }
+
+struct table* get_table(const char *const tablename, struct database* db) {
+    struct table* new_table = malloc(sizeof(struct table));
+    struct table_header* new_th = malloc(sizeof(struct table_header));
+
+    if (read_table_header(db->database_file, tablename, new_th, db->database_header->table_count) == READ_OK) {
+        new_table->table_header = new_th;
+        new_table->table_schema = NULL;
+        return new_table;
+    } else {
+        printf("Не удалось прочитать таблицу\n");
+        return NULL;
+    }
+}
+
