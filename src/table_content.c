@@ -27,7 +27,8 @@ void fill_with_bool(struct row* row, bool value, uint32_t offset) {
 
 void fill_with_string(struct row* row, char* value, uint32_t offset, uint32_t string_len) {
     char* pointer_to_write = (char*) row->content + offset;
-    strcpy(pointer_to_write, value);
+    strncpy(pointer_to_write, "", string_len);
+    strncpy(pointer_to_write, value, string_len);
     //memcpy(row->content+offset, value, string_len);
 }
 
@@ -74,7 +75,20 @@ void fill_row_attribute(struct row* row, const char* column_name, enum data_type
 }
 
 void insert_row_to_table(struct row* row) {
-    //чтбы добавить строку, надо найти какая страница последняя у этой таблицы и зафигачить туда
     struct page* page_with_free_space = row->table->table_header->current_page;
-    write_row_to_page(page_with_free_space->page_header->table_header->db->database_file, page_with_free_space, row);
+    enum write_status answer = write_row_to_page(page_with_free_space->page_header->table_header->db->database_file, page_with_free_space, row);
+    if (answer != WRITE_OK) printf("Строка не записалась");
+    else {
+        row->table->table_header->row_count += 1;
+        answer = overwrite_th_after_change(page_with_free_space->page_header->table_header->db->database_file, row->table->table_header);
+        if (answer != WRITE_OK) printf("Не удалось перезаписать заголовок таблицы");
+    }
+}
+
+void delete_row_from_table(struct row* row) {
+
+}
+
+void update_row_in_table(struct row* row) {
+
 }

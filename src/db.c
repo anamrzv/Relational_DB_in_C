@@ -14,7 +14,10 @@ struct page* create_page(struct database_header* db_header, struct table_header*
         db_header->page_count += 1;
 
         created_page_header->page_number_general = db_header->page_count;
-        created_page_header->page_number_table = db_header->page_count;
+
+        if (db_header->last_tech_page == NULL) created_page_header->page_number_table = 1;
+        else created_page_header->page_number_table = db_header->last_tech_page->page_header->page_number_table + 1;
+
         created_page_header->database_header = db_header;
         created_page_header->table_header = NULL;
     } else if (table_header != NULL) {
@@ -58,22 +61,26 @@ bool table_exists(struct table_header* th_list, const size_t len, const char* na
     else return false;
 }
 
-void add_page_back_to_db_header_list(struct database_header* db_header) {
+struct page* add_page_back_to_db_header_list(struct database_header* db_header) {
     struct page* new_page = create_page(db_header, NULL);
     if (new_page != NULL) {
-        if (db_header->first_page == NULL) {
-            db_header->first_page = new_page;
+        if (db_header->first_page == NULL) db_header->first_page = new_page;
+        else {
+            db_header->last_tech_page->page_header->next = new_page;
         }
+        db_header->last_tech_page = new_page;
+        return new_page;
     }
 }
 
-void add_page_back_to_table_header_list(struct table_header* table_header) {
+struct page* add_page_back_to_table_header_list(struct table_header* table_header) {
     struct page* new_page = create_page(NULL, table_header);
     if (new_page != NULL) {
         if (table_header->current_page != NULL) {
             table_header->current_page->page_header->next = new_page;
         } else table_header->starting_page = new_page;
         table_header->current_page = new_page;
+        return new_page;
     }
 }
 
@@ -108,6 +115,7 @@ struct database* create_database_in_file(const char *const filename) {
     db_header->page_size = DEFAULT_PAGE_SIZE_B;
  
     db_header->first_page = NULL;
+    db_header->last_tech_page = NULL;
     db_header->next = NULL;
     db_header->last_table_header = NULL;
     db_header->db = db;
@@ -160,6 +168,7 @@ struct table* create_table_from_schema(struct table_schema* schema, const char* 
     }
     
     write_header_to_tech_page(db->database_file, db->database_header->first_page, table_header->current_page);
+    overwrite_dh_after_change(db->database_file, db->database_header);
     write_table_page_first_time(db->database_file, table_header->current_page);
 
     return created_table;
@@ -180,7 +189,8 @@ void delete_table(const char* table_name, struct database* db) {
                 cur->valid = false;
                 destroy_table_page_list(cur->starting_page); //удалили все страницы этой таблицы
                 if (index == 0) overwrite_after_table_delete(db->database_file, cur, NULL, db->database_header);
-                else overwrite_after_table_delete(db->database_file, cur, left_to_cur, NULL);
+                else overwrite_after_table_delete(db->database_file, cur, left_to_cur, db->database_header);
+                overwrite_dh_after_change(db->database_file, db->database_header);
                 free(cur->table);
                 free(cur);
                 break;
@@ -194,4 +204,7 @@ void delete_table(const char* table_name, struct database* db) {
     }
 }
 
-
+bool enough_free_space(struct page* page, uint32_t desired_volume) {
+    if (page->page_header->free_bytes >= desired_volume) return true;
+    else return false;
+}

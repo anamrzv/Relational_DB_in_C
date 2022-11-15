@@ -12,7 +12,7 @@ int main(int argc, char** argv)
     first_schema = add_column_to_schema(first_schema, "male", TYPE_BOOL);
     first_schema = add_string_column_to_schema(first_schema, "name", TYPE_STRING, 20);
 
-    struct database* my_db = get_prepared_database("db6.bin", TO_BE_CREATED);
+    struct database* my_db = get_prepared_database("db.bin", TO_BE_CREATED);
 
     struct table* table1 = create_table_from_schema(first_schema, "table1", my_db);
     struct table* table2 = create_table_from_schema(first_schema, "table2", my_db);
@@ -27,6 +27,10 @@ int main(int argc, char** argv)
     fill_row_attribute(row1, "name", TYPE_STRING, (void*) &my_name);
     fill_row_attribute(row1, "male", TYPE_BOOL, (void*) &my_sex);
     insert_row_to_table(row1); 
+
+    char* changed_name = "Nastya";
+    fill_row_attribute(row1, "name", TYPE_STRING, (void*) &changed_name);
+
 
     delete_table("table1", my_db);
     delete_table("table2", my_db);

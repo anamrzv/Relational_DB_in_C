@@ -90,5 +90,7 @@ void fill_with_float(struct row* row, double value, uint32_t offset);
 int32_t column_offset(const struct column* column_list, const size_t len, const char* name);
 void fill_row_attribute(struct row* row, const char* column_name, enum data_type column_type, void* value);
 void insert_row_to_table(struct row* row);
+void delete_row_from_table(struct row* row);
+void update_row_in_table(struct row* row);
 
 #endif
