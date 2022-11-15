@@ -2,9 +2,7 @@
 #include "../include/table.h"
 #include "../include/db.h"
 
-
-int main(int argc, char** argv)
-{
+void write_db() {
     printf("Test");
 
     struct table_schema* first_schema = create_table_schema();
@@ -31,14 +29,31 @@ int main(int argc, char** argv)
     char* changed_name = "Nastya";
     fill_row_attribute(row1, "name", TYPE_STRING, (void*) &changed_name);
 
+    close_database(my_db);
 
-    delete_table("table1", my_db);
-    delete_table("table2", my_db);
+    //delete_table("table1", my_db);
+    //delete_table("table2", my_db);
     destroy_column_list(first_schema->columns);
     free(first_schema);
 
     free(my_db->database_header->first_page);
     free(&my_db->database_header);
     free(my_db);
+}
+
+void read_db() {
+    struct table_schema* first_schema = create_table_schema();
+    first_schema = add_column_to_schema(first_schema, "age", TYPE_INT32);
+    first_schema = add_column_to_schema(first_schema, "male", TYPE_BOOL);
+    first_schema = add_string_column_to_schema(first_schema, "name", TYPE_STRING, 20);
+
+    struct database* my_db = get_prepared_database("db.bin", EXISTING);
+}
+
+int main(int argc, char** argv)
+{
+    //write_db();
+    read_db();
     return 0;
 }
+

@@ -130,7 +130,30 @@ struct database* create_database_in_file(const char *const filename) {
 }
 
 struct database* get_database_from_file(const char *const filename) {
-    //TODO
+    struct database* db = malloc(sizeof(struct database));
+    struct database_header* db_header = malloc(sizeof(struct database_header));
+
+    FILE *in = NULL;
+    switch (open_file(&in, filename, "r+"))
+    {
+    case OPEN_ERROR:
+        printf("Ошибка при открытии файла\n");
+        return NULL;
+    case OPEN_OK:
+        printf("Файл успешно открыт\n");
+        break;
+    }
+
+    enum read_status read_status = read_database_header(in, db_header);
+    if (read_status == READ_OK) {
+        db->database_header = db_header;
+        db->database_file = in;
+        return db;
+    } else {
+        printf("Не удалось прочитать заголовок БД");
+        return NULL;
+    }
+
 }
 
 struct table* create_table_from_schema(struct table_schema* schema, const char* table_name, struct database* db) {
@@ -207,4 +230,8 @@ void delete_table(const char* table_name, struct database* db) {
 bool enough_free_space(struct page* page, uint32_t desired_volume) {
     if (page->page_header->free_bytes >= desired_volume) return true;
     else return false;
+}
+
+void close_database(struct database* db) {
+    close_file(db->database_file);
 }

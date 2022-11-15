@@ -3,22 +3,13 @@
 
 enum open_status open_file(FILE **in, const char *const filename, const char *const mode) {
     *in = fopen(filename, mode);
-    if (*in == NULL)
-    {
-        return OPEN_ERROR;
-    }
-    else
-        return OPEN_OK;
+    if (*in == NULL) return OPEN_ERROR;
+    else return OPEN_OK;
 }
 
 enum close_status close_file(FILE *in) {
-    int64_t res = fclose(in);
-    if (res != 0)
-    {
-        return CLOSE_ERROR;
-    }
-    else
-        return CLOSE_OK;
+    if (fclose(in) == 0)return CLOSE_OK;
+    else return CLOSE_ERROR;
 }
 
 enum write_status write_header_to_tech_page(FILE *file, struct page* tech_page, struct page* table_page) {
@@ -105,4 +96,10 @@ enum write_status write_row_to_page(FILE *file, struct page* page_to_write, stru
         }
     }
     return WRITE_ERROR;
+}
+
+enum read_status read_database_header(FILE *file, struct database_header* db_header) {
+   fseek(file, 0, SEEK_SET);
+   if (fread(db_header, sizeof(struct database_header), 1, file) == 1) return READ_OK;
+   else return READ_ERROR;
 }

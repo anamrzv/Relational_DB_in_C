@@ -63,6 +63,6 @@ struct database* get_database_from_file(const char *const filename);
 struct table* create_table_from_schema(struct table_schema* schema, const char* table_name, struct database* db);
 void delete_table(const char* table_name, struct database* db);
 bool enough_free_space(struct page* page, uint32_t desired_volume);
-
+void close_database(struct database* db);
 
 #endif
