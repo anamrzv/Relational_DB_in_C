@@ -23,32 +23,6 @@ struct page* create_page(struct database_header* db_header, struct table_header*
     return created_page_header;
 }
 
-//TODO
-void destroy_table_page_list(struct page* page_list) {
-    struct page* next;
-    struct page* cur=page_list;
-    while (cur) {
-        next = cur->page_header->next;
-        free(cur);
-        cur = next;
-    }
-}
-
-//TODO
-bool table_exists(struct table_header* th_list, const size_t len, const char* name) {
-    int32_t index = 0;
-    const struct table_header* cur = th_list;
-    if (th_list != NULL){
-        while (index != len) {
-            if (strcmp(cur->name, name) == 0) return true;
-            index++;
-            cur=cur->next;
-        }
-        return false;
-    } 
-    else return false;
-}
-
 struct page_header* add_tech_page(struct database_header* db_header) {
     db_header->page_count += 1;
     struct page_header* new_page_header = create_page(db_header, NULL);
@@ -145,9 +119,8 @@ struct database* get_database_from_file(const char *const filename) {
 
 }
 
-//TODO
 struct table* create_table_from_schema(struct table_schema* schema, const char* table_name, struct database* db) {
-    if (table_exists(db->database_header->next, db->database_header->table_count, table_name)) {
+    if (table_exists(db->database_file, db->database_header->table_count, table_name)) {
         printf("Таблица с таким именем существует. Нельзя создать.");
         return NULL;
     }
@@ -173,40 +146,24 @@ struct table* create_table_from_schema(struct table_schema* schema, const char* 
     
     write_header_to_tech_page(db->database_file, db->database_header, new_page_header);
     overwrite_dh_after_change(db->database_file, db->database_header);
-    write_table_page_first_time(db->database_file, table_header->current_page);
+    write_table_page_first_time(db->database_file, new_page_header);
 
     return created_table;
 }
 
-//TODO
-void delete_table(const char* table_name, struct database* db) {
-    size_t index = 0;
-    struct database_header* left_to_cur_db = db->database_header;
-    struct table_header* left_to_cur = NULL;
+void delete_table(const char* tablename, struct database* db) {
+    struct table_header* th_to_delete = malloc(sizeof(struct table_header));
 
-    struct table_header* cur = db->database_header->next;
-    uint32_t table_count = db->database_header->table_count;
-    if (table_count != 0) {
-        while (index != table_count) {
-            if (strcmp(cur->name, table_name) == 0) {
-                db->database_header->table_count -= 1;
-                db->database_header->page_count -= cur->page_count;
-                cur->valid = false;
-                destroy_table_page_list(cur->starting_page); //удалили все страницы этой таблицы
-                if (index == 0) overwrite_after_table_delete(db->database_file, cur, NULL, db->database_header);
-                else overwrite_after_table_delete(db->database_file, cur, left_to_cur, db->database_header);
-                overwrite_dh_after_change(db->database_file, db->database_header);
-                free(cur->table);
-                free(cur);
-                break;
-            } else {
-                index++;
-                left_to_cur = cur;
-                cur = cur->next;
-            }
-        }
-        if (index == table_count) printf("Таблицы с таким названием нет");
-    }
+    if (read_table_header(db->database_file, tablename, th_to_delete, db->database_header->table_count) == READ_OK) {
+        th_to_delete->valid = false;
+        db->database_header->table_count -= 1;
+        db->database_header->page_count -= th_to_delete->page_count;
+
+        overwrite_th_after_change(db->database_file, th_to_delete);
+        overwrite_dh_after_change(db->database_file, db->database_header);
+
+        free(th_to_delete);
+    } else printf("Не удалось удалить таблицу с таким именем\n");
 }
 
 bool enough_free_space(struct page_header* page_header, uint32_t desired_volume) {
@@ -218,13 +175,15 @@ void close_database(struct database* db) {
     close_file(db->database_file);
 }
 
-struct table* get_table(const char *const tablename, struct database* db) {
+struct table* get_table(const char* tablename, struct database* db) {
     struct table* new_table = malloc(sizeof(struct table));
     struct table_header* new_th = malloc(sizeof(struct table_header));
 
     if (read_table_header(db->database_file, tablename, new_th, db->database_header->table_count) == READ_OK) {
         new_table->table_header = new_th;
         new_table->table_schema = NULL;
+        new_table->table_header->db = db;
+        new_table->table_header->db = NULL;
         return new_table;
     } else {
         printf("Не удалось прочитать таблицу\n");

@@ -76,7 +76,7 @@ void fill_row_attribute(struct row* row, const char* column_name, enum data_type
 
 void insert_row_to_table(struct row* row) {
     uint32_t page_with_free_space_num = row->table->table_header->last_page_general_number;
-    enum write_status answer = write_row_to_page(row->table->table_header->db->database_file, page_with_free_space, row);
+    enum write_status answer = write_row_to_page(row->table->table_header->db->database_file, page_with_free_space_num, row);
     if (answer != WRITE_OK) printf("Строка не записалась");
 }
 
