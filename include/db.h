@@ -18,23 +18,16 @@ enum database_type {
 };
 
 struct page_header {
-    struct table_header* table_header;
-    struct database_header* database_header;
     uint16_t free_bytes;
-    uint32_t page_number_table; //номер страницы в общем списке страниц
     uint32_t page_number_general;
     bool dirty;
 
     uint32_t free_space_cursor; //offset курсор там где можно писать, изначально это начало страницы
-    struct page* next; //связный список - след. страница этой таблицы
 
     char table_name[MAX_TABLE_NAME_LEN];
+    uint32_t table_number_in_tech_page;
+
     uint32_t next_page_number_general;
-};
-
-
-struct page {
-    struct page_header* page_header;
 };
 
 struct database_header {
@@ -44,13 +37,9 @@ struct database_header {
     uint32_t table_count;
     uint32_t page_count;
 
-    uint32_t page_size; //по умолчанию 4 байт, проверить тип данных
-    
-    struct page* first_page; //служебная страница
-    struct page* last_tech_page;
-    
-    struct table_header* next; //первый табличный заголовок
-    struct table_header* last_table_header;
+    uint32_t page_size; //по умолчанию 4 байт
+
+    uint32_t last_page_general_number;
 };
 
 struct database {

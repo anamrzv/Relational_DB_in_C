@@ -38,30 +38,21 @@ struct table_header {
     char name[MAX_NAME_LEN];
     struct database* db;
     struct table* table;
-    uint64_t row_count;
 
     uint32_t page_count; //количество страниц в таблице
-
-    struct page* starting_page; //начало записей aka первая страница
-    struct page* current_page; //место где остановились и свободно для записи  
-
-    struct table_header* next; 
 
     uint32_t number_in_tech_page;
     bool valid;
 
     struct table_schema schema;
+
     uint32_t first_page_general_number;
+    uint32_t last_page_general_number;
 };
 
 struct table {
     struct table_header* table_header;
     struct table_schema* table_schema; //мб надо убрать указатель
-};
-
-struct resultset {
-    uint64_t length;
-    char* cursor; //указатель на начало данных
 };
 
 struct row_header {
