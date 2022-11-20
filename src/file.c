@@ -150,7 +150,7 @@ bool table_exists(FILE *file, const size_t len, const char* name, struct table_h
         while (index != len) {
 
             fread(cur, sizeof(struct table_header), 1, file);
-            if (cur->valid && (cur->name, name) == 0) return true;
+            if (cur->valid && strcmp(cur->name, name) == 0) return true;
 
             index++;
             current_pointer += sizeof(struct table_header);
@@ -166,4 +166,142 @@ bool table_exists(FILE *file, const size_t len, const char* name, struct table_h
 
     } 
     else return false;
+}
+
+enum read_status read_columns_of_table(FILE *file, struct table* table) {
+    fseek(file, (table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header), SEEK_SET);
+    uint16_t size_of_column_array;
+    fread(&size_of_column_array, sizeof(uint16_t), 1, file);
+    struct column* columns = malloc(sizeof(struct column)*table->table_header->schema.column_count);
+    fread(columns, size_of_column_array, 1, file);
+    table->table_schema->columns = columns;
+    table->table_schema->column_count = table->table_header->schema.column_count;
+    table->table_schema->last_column = NULL;
+    table->table_schema->row_length = table->table_header->schema.row_length;
+    return READ_OK;
+}
+
+bool compare_int(char* pointer_to_read_row, void* column_value, uint32_t offset) {
+    int32_t* value_to_compare = (int32_t*) pointer_to_read_row + offset; //по этому адресу лежит чиселко
+    int32_t given_value = *((int32_t*) column_value);
+    if (*value_to_compare == given_value) return true;
+    return false;
+}
+
+bool compare_bool(char* pointer_to_read_row, void* column_value, uint32_t offset) {
+    bool* value_to_compare = (bool*) pointer_to_read_row + offset;
+    bool given_value = *((bool*) column_value);
+    if (*value_to_compare == given_value) return true;
+    return false;
+}
+
+bool compare_string(char* pointer_to_read_row, void* column_value, uint32_t offset, uint16_t column_size) {
+    char* value_to_compare = (char*) pointer_to_read_row + offset; 
+    //printf("\nБыло %s", value_to_compare);
+    //printf("\ndlina %d", strlen(value_to_compare));
+    char* given_value = *((char**) column_value);
+
+    // char* dest = malloc(sizeof(char)*column_size);
+    // strncpy(dest, "", column_size);
+    // strncpy(dest, given_value, strlen(given_value));
+    // printf("\nСтало %s", dest);
+    
+    //strncpy(dest, value_to_compare, column_size);
+    if (strcmp(value_to_compare, given_value) == 0) return true;
+    return false;
+}
+
+bool compare_float(char* pointer_to_read_row, void* column_value, uint32_t offset) {
+    double* value_to_compare = (double*) pointer_to_read_row + offset;
+    double given_value = *((double*) column_value);
+    if (*value_to_compare == given_value) return true;
+    return false;
+}
+
+//TODO table num in tech page поправить
+void select_where(FILE *file, struct table* table, uint32_t offset, uint16_t column_size, void* column_value, enum data_type type, int32_t row_count) {
+    //считывать строки и выводить их если подходят по условию
+    uint32_t current_pointer = sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count;
+    struct row_header* rh =  malloc(sizeof(struct row_header));
+    char* pointer_to_read_row = malloc(table->table_schema->row_length);
+
+    struct page_header* ph = malloc(sizeof(struct page_header));
+    fseek(file, (table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
+    fread(ph, sizeof(struct page_header), 1, file); //прочитали заголовок страницы
+
+    fseek(file, sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count, SEEK_CUR); //передвинулись на начало строк
+
+        while (current_pointer != ph->free_space_cursor) {
+
+            fread(rh, sizeof(struct row_header), 1, file);
+            if (rh->valid) {
+                fread(pointer_to_read_row, table->table_schema->row_length, 1, file); //прочитали всю строку и у нас есть указатель на нее
+                switch (type) {
+                    case TYPE_INT32:
+                        if (compare_int(pointer_to_read_row, column_value, offset)) print_passed_content(pointer_to_read_row, table->table_schema->columns, table->table_schema->column_count);
+                        break;
+                    case TYPE_BOOL:
+                        if (compare_bool(pointer_to_read_row, column_value, offset)) print_passed_content(pointer_to_read_row, table->table_schema->columns, table->table_schema->column_count);
+                        break;
+                    case TYPE_STRING:
+                        if (compare_string(pointer_to_read_row, column_value, offset, column_size)) print_passed_content(pointer_to_read_row, table->table_schema->columns, table->table_schema->column_count);
+                        break;
+                    case TYPE_FLOAT:
+                        if (compare_float(pointer_to_read_row, column_value, offset)) print_passed_content(pointer_to_read_row, table->table_schema->columns, table->table_schema->column_count);
+                        break;
+                }
+            }
+
+            current_pointer += sizeof(struct row_header)+table->table_schema->row_length;
+
+            if (ph->next_page_number_general != 0 && current_pointer == ph->free_space_cursor) {
+                current_pointer = sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count;
+                fseek(file, (ph->next_page_number_general-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
+                fread(ph, sizeof(struct page_header), 1, file);
+                fseek(file, sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count, SEEK_CUR);
+            }
+    
+        }
+}
+
+void print_int(char* row_start, uint32_t offset) {
+    int32_t* value_to_print = (int32_t*) row_start + offset;
+    printf("%" PRId32 ";", *value_to_print);
+}
+
+void print_bool(char* row_start, uint32_t offset) {
+    bool* value_to_print = (bool*) row_start + offset;
+    printf("%s;", *value_to_print ? "true" : "false");
+}
+
+void print_string(char* row_start, uint32_t offset) {
+    char* value_to_print = (char*) row_start + offset;
+    printf("%s;", value_to_print);
+}
+
+void print_float(char* row_start, uint32_t offset) {
+    double* value_to_print = (double*) row_start + offset;
+    printf("%f;", *value_to_print);
+}
+
+void print_passed_content(char* row_start, struct column* columns, uint16_t len) {
+    uint16_t offset = 0;
+    for (size_t i=0; i<len; i++) {
+        switch (columns[i].column_type) {
+            case TYPE_INT32:
+                print_int(row_start, offset);
+                break;
+            case TYPE_BOOL:
+                print_bool(row_start, offset);
+                break;
+            case TYPE_STRING:
+                print_string(row_start, offset);
+                break; 
+            case TYPE_FLOAT:
+                print_float(row_start, offset);
+                break; 
+        }
+        offset += columns[i].size;
+    }
+    printf("\n");
 }

@@ -6,12 +6,15 @@
 #include <inttypes.h>
 #include "db.h"
 
+enum data_type;
 struct database_header;
 struct page;
 struct table_header;
 struct table_schema;
 struct row;
 struct page_header;
+struct column;
+struct table;
 
 enum open_status  {
   OPEN_OK = 0,
@@ -47,5 +50,21 @@ enum write_status write_row_to_page(FILE *file, uint32_t page_to_write_num, stru
 enum read_status read_database_header(FILE *file, struct database_header* db_header);
 enum read_status read_table_header(FILE *file, const char *const tablename, struct table_header* read_th, size_t table_count);
 bool table_exists(FILE *file, const size_t len, const char* name, struct table_header* cur);
+
+enum read_status read_columns_of_table(FILE *file, struct table* table);
+bool compare_int(char* pointer_to_read_row, void* column_value, uint32_t offset);
+bool compare_bool(char* pointer_to_read_row, void* column_value, uint32_t offset);
+bool compare_string(char* pointer_to_read_row, void* column_value, uint32_t offset, uint16_t column_size);
+bool compare_float(char* pointer_to_read_row, void* column_value, uint32_t offset);
+void select_where(FILE *file, struct table* table, uint32_t offset, uint16_t column_size, void* column_value, enum data_type type, int32_t row_count);
+
+void print_int(char* row_start, uint32_t offset);
+void print_bool(char* row_start, uint32_t offset);
+void print_string(char* row_start, uint32_t offset);
+void print_float(char* row_start, uint32_t offset);
+void print_passed_content(char* row_start, struct column* columns, uint16_t len);
+
+
+
 
 #endif

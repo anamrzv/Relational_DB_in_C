@@ -180,12 +180,13 @@ void close_database(struct database* db) {
 struct table* get_table(const char* tablename, struct database* db) {
     struct table* new_table = malloc(sizeof(struct table));
     struct table_header* new_th = malloc(sizeof(struct table_header));
+    struct table_schema* new_ts = malloc(sizeof(struct table_schema));
 
     if (read_table_header(db->database_file, tablename, new_th, db->database_header->table_count) == READ_OK) {
         new_table->table_header = new_th;
-        new_table->table_schema = NULL;
+        new_table->table_schema = new_ts;
+        read_columns_of_table(db->database_file, new_table);
         new_table->table_header->db = db;
-        new_table->table_header->db = NULL;
         return new_table;
     } else {
         printf("Не удалось прочитать таблицу\n");
@@ -193,12 +194,12 @@ struct table* get_table(const char* tablename, struct database* db) {
     }
 }
 
-struct query* create_query(enum query_type type, struct table* tables, char** columns, void* values, int32_t row_count) {
+struct query* create_query(enum query_type type, struct table* tables, char* column, void* values, int32_t row_count) {
     struct query* new_query= malloc(sizeof(struct query));
     new_query->type = type;
     new_query->table = tables;
-    new_query->column_names = *columns;
-    new_query->column_values = values;
+    new_query->column_name = column;  
+    new_query->column_value = values;
     new_query->rows_number = row_count;
 
     return new_query;

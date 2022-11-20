@@ -17,9 +17,9 @@ struct query {
     enum query_type type;
 
     struct table* table;
-    char* column_names;
-    void* column_values;
-    
+    char* column_name;
+    void* column_value;
+
     int32_t rows_number;
 };
 

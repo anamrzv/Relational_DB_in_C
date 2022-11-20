@@ -53,16 +53,34 @@ void read_db() {
     fill_row_attribute(row1, "male", TYPE_BOOL, (void*) &my_sex);
     insert_row_to_table(row1);
 
-    char* columns[1] = {"name"};
-    void* values[1] = {"Nastya"};
-    struct query* select_query = create_query(SELECT_WHERE, my_first_table, columns, values, -1);
-    run_query(select_query);
+    struct row* row2 = create_row(my_first_table);
+    my_age = 10;
+    my_name = "Nastya";
+    my_sex = true;
+    fill_row_attribute(row2, "age", TYPE_INT32, (void*) &my_age);
+    fill_row_attribute(row2, "name", TYPE_STRING, (void*) &my_name);
+    fill_row_attribute(row2, "male", TYPE_BOOL, (void*) &my_sex);
+    insert_row_to_table(row2);
+
+    // char* changed_name = "Nastya";
+    // fill_row_attribute(row1, "name", TYPE_STRING, (void*) &changed_name);
+    // insert_row_to_table(row1);
+
+    char* column = "age";
+    uint32_t value = 20;
+    struct query* select_query = create_query(SELECT_WHERE, my_first_table, column, (void*) &value, -1);
+    //run_query(select_query);
+
+    char* column2 = "name";
+    char* value2 = "Nastya";
+    struct query* select_query_2 = create_query(SELECT_WHERE, my_first_table, column2, (void*) &value2, -1);
+    run_query(select_query_2);
 }
 
 int main(int argc, char** argv)
 {
     write_db();
-    //read_db();
+    read_db();
     return 0;
 }
 

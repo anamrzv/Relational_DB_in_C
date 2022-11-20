@@ -1,5 +1,18 @@
 #include "../include/table.h"
 
+
+int32_t string_column_length(const struct column* column_list, const size_t len, const char* name) {
+    int32_t index = 0;
+    if (column_list != NULL){
+        while (index != len) {
+            if (strcmp(column_list[index].name, name) == 0) return column_list[index].size;
+            index++;
+        }
+        return -1;
+    } 
+    else return -1;
+}
+
 uint32_t column_exists(const struct column* column_list, const size_t len, const char* name) {
     int32_t index = 0;
     const struct column* cur = column_list;

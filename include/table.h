@@ -23,7 +23,7 @@ enum data_type {
 struct column {
     char name[MAX_NAME_LEN];
     enum data_type column_type;
-    uint16_t size;
+    uint32_t size;
     struct column* next;
 };
 
@@ -65,6 +65,7 @@ struct row {
     void** content;
 };
 
+int32_t string_column_length(const struct column* column_list, const size_t len, const char* name);
 uint32_t column_exists(const struct column* column_list, const size_t len, const char* name);
 void destroy_column_list(struct column* column_list);
 void add_back_column_to_list(struct table_schema* schema, const char* column_name, enum data_type column_type);
