@@ -172,12 +172,14 @@ enum read_status read_columns_of_table(FILE *file, struct table* table) {
     fseek(file, (table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header), SEEK_SET);
     uint16_t size_of_column_array;
     fread(&size_of_column_array, sizeof(uint16_t), 1, file);
+    fseek(file, (table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t), SEEK_SET);
     struct column* columns = malloc(sizeof(struct column)*table->table_header->schema.column_count);
     fread(columns, size_of_column_array, 1, file);
     table->table_schema->columns = columns;
     table->table_schema->column_count = table->table_header->schema.column_count;
     table->table_schema->last_column = NULL;
     table->table_schema->row_length = table->table_header->schema.row_length;
+    table->table_header->schema.columns = columns; //check
     return READ_OK;
 }
 
@@ -229,11 +231,15 @@ void select_where(FILE *file, struct table* table, uint32_t offset, uint16_t col
     fseek(file, (table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
     fread(ph, sizeof(struct page_header), 1, file); //прочитали заголовок страницы
 
-    fseek(file, sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count, SEEK_CUR); //передвинулись на начало строк
+    uint32_t s1 = sizeof(struct page_header);
+    uint32_t s2 = sizeof(uint16_t);
+    uint32_t s3 = sizeof(struct column)*table->table_schema->column_count;
+
+    fseek(file, (table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count, SEEK_SET); //передвинулись на начало строк
 
         while (current_pointer != ph->free_space_cursor) {
 
-            fread(rh, sizeof(struct row_header), 1, file);
+            fread(rh, sizeof(struct row_header), 1, file); //!!!
             if (rh->valid) {
                 fread(pointer_to_read_row, table->table_schema->row_length, 1, file); //прочитали всю строку и у нас есть указатель на нее
                 switch (type) {

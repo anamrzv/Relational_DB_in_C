@@ -41,8 +41,9 @@ int32_t column_offset(const struct column* column_list, const size_t len, const 
     uint32_t offset = 0;
     if (column_list != NULL){
         while (index != len) {
+            struct column col = column_list[index]; 
             uint32_t b = column_list[index].size;
-            if (strcmp(column_list[index].name, name) == 0) return offset;
+            if (strcmp(column_list[index].name, name) == 0) return offset; //!!!
             index++;
             offset += b;
         }
@@ -52,7 +53,7 @@ int32_t column_offset(const struct column* column_list, const size_t len, const 
 }
 
 void fill_row_attribute(struct row* row, const char* column_name, enum data_type column_type, void* value) {
-    read_columns_of_table(row->table->table_header->db->database_file, row->table);
+    read_columns_of_table(row->table->table_header->db->database_file, row->table); //нужно для таблиц созданных до
     uint32_t offset = column_offset(row->table->table_schema->columns, row->table->table_schema->column_count, column_name);
     if (offset != -1) {
         switch (column_type) {
