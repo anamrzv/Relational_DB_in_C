@@ -1,31 +1,31 @@
 #include <inttypes.h>
 #include <stdlib.h>
+#include "table.h"
 
 #define MAX_TABLE_NAME_LEN 20
 #define MAX_COLUMN_NAME_LEN 20
 #define INITIAL_ARRAY_SIZE 1
 
+enum query_type {
+    SELECT = 0,
+    SELECT_WHERE,
+    UPDATE_WHERE,
+    DELETE_WHERE,
+};
+
 struct query {
     enum query_type type;
 
-    char* table_name[MAX_TABLE_NAME_LEN];
-    char column_names[INITIAL_ARRAY_SIZE][MAX_COLUMN_NAME_LEN]; //TODO
-    void* column_values[INITIAL_ARRAY_SIZE];
+    struct table* table;
+    char* column_names;
+    void* column_values;
     
-    uint64_t rows_number;
+    int32_t rows_number;
 };
 
 struct query_join {
-    char* first_table_name[MAX_TABLE_NAME_LEN];
-    char* second_table_name[MAX_TABLE_NAME_LEN];
-    char first_column_names[INITIAL_ARRAY_SIZE][MAX_COLUMN_NAME_LEN]; //TODO
-    char second_column_names[INITIAL_ARRAY_SIZE][MAX_COLUMN_NAME_LEN]; //TODO
-};
-
-enum query_type {
-    SELECT_ALL = 0,
-    SELECT_SOME,
-    UPDATE_WHERE,
-    DELETE_WHERE,
-    SELECT_WHERE,
+    struct table* first_table;
+    struct table* second_table;
+    char* first_column_names;
+    char* second_column_names;
 };

@@ -1,4 +1,3 @@
-#include <inttypes.h>
 #include "../include/file.h"
 
 enum open_status open_file(FILE **in, const char *const filename, const char *const mode) {
@@ -22,22 +21,28 @@ enum write_status write_db_to_file(FILE *file, struct database_header* db_header
     return WRITE_ERROR;
 }
 
-enum write_status write_header_to_tech_page(FILE *file, struct database_header* db_header, struct page_header* table_page_header) {
-    fseek(file, sizeof(struct database_header), SEEK_SET);
+enum write_status write_header_to_tech_page(FILE *file, struct database_header* db_header, struct table_header* new_table_header) {
+    if (db_header->last_page_general_number == 1) fseek(file, sizeof(struct database_header), SEEK_SET);
+    else fseek(file, (db_header->last_page_general_number-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
     struct page_header* tech_page_header = malloc(sizeof(struct page_header));
     fread(tech_page_header, sizeof(struct page_header), 1, file);
     if (!enough_free_space(tech_page_header, sizeof(struct table_header))) {
         struct page_header* new_page_header = add_tech_page(db_header);
         tech_page_header = new_page_header;
         if (overwrite_dh_after_change(file, db_header) != WRITE_OK) return WRITE_ERROR;
+
+        fseek(file, (tech_page_header->page_number_general-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
+        tech_page_header->free_space_cursor += sizeof(struct page_header);
+        tech_page_header->free_bytes -= sizeof(struct page_header);
+        if (fwrite(tech_page_header, sizeof(struct page_header), 1, file) != 1) return WRITE_ERROR;
     }
     fseek(file, tech_page_header->free_space_cursor, SEEK_SET);
-    if (fwrite(table_page_header, sizeof(struct table_header), 1, file) == 1) {
+    if (fwrite(new_table_header, sizeof(struct table_header), 1, file) == 1) {
         tech_page_header->free_space_cursor += sizeof(struct table_header);
         tech_page_header->free_bytes -= sizeof(struct table_header);
 
-        if (table_page_header->page_number_general == 1) fseek(file, sizeof(struct database_header), SEEK_SET);
-        else fseek(file, (table_page_header->page_number_general-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
+        if (tech_page_header->page_number_general == 1) fseek(file, sizeof(struct database_header), SEEK_SET);
+        else fseek(file, (tech_page_header->page_number_general-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
         
         if (fwrite(tech_page_header, sizeof(struct page_header), 1, file) == 1) return WRITE_OK;
     }
@@ -56,12 +61,26 @@ enum write_status overwrite_dh_after_change(FILE *file, struct database_header* 
     else return WRITE_ERROR;
 }
 
-enum write_status write_table_page_first_time(FILE *file, struct page_header* page_to_write) {
+enum write_status write_table_page(FILE *file, struct page_header* page_to_write, struct table_schema* schema) {
     fseek(file, (page_to_write->page_number_general-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
-    page_to_write->free_bytes -= sizeof(struct page_header);
-    page_to_write->free_space_cursor += sizeof(struct page_header);
-    if (fwrite(page_to_write, sizeof(struct page_header), 1, file) == 1) return WRITE_OK;
-    else return WRITE_ERROR;
+    uint16_t size_of_column_array = schema->column_count*sizeof(struct column);
+
+    page_to_write->free_bytes -= sizeof(struct page_header)+sizeof(uint16_t)+size_of_column_array;
+    page_to_write->free_space_cursor += sizeof(struct page_header)+sizeof(uint16_t)+size_of_column_array;
+    if (fwrite(page_to_write, sizeof(struct page_header), 1, file) != 1) return WRITE_ERROR;
+
+    struct column* columns_array = malloc(size_of_column_array);
+
+    struct column* cur = schema->columns;
+    for (size_t i=0; i<schema->column_count; i++){
+        columns_array[i] = *cur;
+        cur = cur->next;
+    }
+
+    if (fwrite(&size_of_column_array, sizeof(uint16_t), 1, file) != 1) return WRITE_ERROR; //записали размер массива колонок
+    if (fwrite(columns_array, size_of_column_array, 1, file) != 1) return WRITE_ERROR; //записали массив колонок
+    free(columns_array);
+    return WRITE_OK;
 }
 
 enum write_status write_row_to_page(FILE *file, uint32_t page_to_write_num, struct row* row) {
@@ -71,15 +90,24 @@ enum write_status write_row_to_page(FILE *file, uint32_t page_to_write_num, stru
     struct page_header* ph_to_write = malloc(sizeof(struct page_header));
     if (fread(ph_to_write, sizeof(struct page_header), 1, file) == 1) {
         if (!enough_free_space(ph_to_write, sum_volume)) {
-            struct page_header* new_page_header = add_page(row->table->table_header, row->table->table_header->db);
+            struct page_header* new_page_header = add_page(row->table->table_header, row->table->table_header->db->database_header);
             if (overwrite_dh_after_change(file, row->table->table_header->db->database_header) != WRITE_OK) return WRITE_ERROR;
+            
+            fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header), SEEK_SET);
+            uint16_t size_of_column_array;
+            fread(&size_of_column_array, sizeof(uint16_t), 1, file);
+            struct column* columns;
+            fread(columns, size_of_column_array, 1, file);
+
             page_to_write_num = new_page_header->page_number_general;
             ph_to_write = new_page_header;
-            ph_to_write->free_bytes -= sizeof(struct page_header);
-            ph_to_write->free_space_cursor += sizeof(struct page_header);
+            ph_to_write->free_bytes -= sizeof(struct page_header)+sizeof(uint16_t)+size_of_column_array;
+            ph_to_write->free_space_cursor += sizeof(struct page_header)+sizeof(uint16_t)+size_of_column_array;
 
             fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
             if (fwrite(ph_to_write, sizeof(struct page_header), 1, file) != 1) return WRITE_ERROR;
+            if (fwrite(&size_of_column_array, sizeof(uint16_t), 1, file) != 1) return WRITE_ERROR;
+            if (fwrite(columns, size_of_column_array, 1, file) != 1) return WRITE_ERROR;
         }
         fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B + ph_to_write->free_space_cursor, SEEK_SET);
         if (fwrite(row->row_header, sizeof(struct row_header), 1, file) == 1) { 
@@ -114,7 +142,7 @@ bool table_exists(FILE *file, const size_t len, const char* name, struct table_h
 
     struct page_header* ph = malloc(sizeof(struct page_header));
     fseek(file, sizeof(struct database_header), SEEK_SET);
-    read(ph, sizeof(struct page_header), 1, file);
+    fread(ph, sizeof(struct page_header), 1, file);
 
     if (len != 0) {
         fseek(file, sizeof(struct database_header)+sizeof(struct page_header), SEEK_SET);
@@ -129,7 +157,7 @@ bool table_exists(FILE *file, const size_t len, const char* name, struct table_h
             if (ph->next_page_number_general != 0 && current_pointer == ph->free_space_cursor) {
                 current_pointer = 0;
                 fseek(file, (ph->next_page_number_general-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
-                read(ph, sizeof(struct page_header), 1, file);
+                fread(ph, sizeof(struct page_header), 1, file);
             }
     
         }

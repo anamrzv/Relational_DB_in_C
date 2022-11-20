@@ -80,6 +80,14 @@ void insert_row_to_table(struct row* row) {
     if (answer != WRITE_OK) printf("Строка не записалась");
 }
 
+void select_row_from_table(struct query* query) {
+    //проверить что такая колонка есть
+    //проверить что тип данных подходит
+    //найти начало таблицы 
+    //считывать строки и выводить их если подходят по условию
+    //
+}
+
 void delete_row_from_table(struct row* row) {
 
 }

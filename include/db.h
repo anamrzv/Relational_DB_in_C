@@ -3,14 +3,16 @@
 
 #include <inttypes.h>
 #include <stdio.h>
-#include "../include/file.h"
-#include "../include/table.h"
+#include "file.h"
+#include "table.h"
 
 #define MAX_DB_NAME_LEN 50
 #define DEFAULT_PAGE_SIZE_B 4096
 #define MAX_TABLE_NAME_LEN 20
 
 struct table_schema;
+struct table_header;
+enum query_type;
 
 enum database_type {
     EXISTING = 0,
@@ -47,9 +49,9 @@ struct database {
     FILE* database_file;
 };
 
-struct page* create_page(struct database_header* db_header, struct table_header* table_header);
+struct page_header* create_page(struct database_header* db_header, struct table_header* table_header);
 struct page_header* add_tech_page(struct database_header* db_header);
-struct page* add_page(struct table_header* table_header, struct database_header* db_header);
+struct page_header* add_page(struct table_header* table_header, struct database_header* db_header);
 
 struct database* get_prepared_database(const char *const filename, const enum database_type type);
 struct database* create_database_in_file(const char *const filename);
@@ -61,5 +63,9 @@ bool enough_free_space(struct page_header* page_header, uint32_t desired_volume)
 void close_database(struct database* db);
 
 struct table* get_table(const char *const tablename, struct database* db);
+
+struct query* create_query(enum query_type type, struct table* tables, char** columns, void* values, int32_t row_count);
+void run_query(struct query* query);
+
 
 #endif

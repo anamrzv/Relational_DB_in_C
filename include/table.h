@@ -7,7 +7,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <malloc.h>
-#include "../include/file.h"
+#include "./file.h"
+#include "./query.h" 
 
 #define MAX_NAME_LEN 20
 #define MAX_DATATYPE_LEN 10
@@ -27,10 +28,9 @@ struct column {
 };
 
 struct table_schema {
-    uint64_t column_count;
+    uint16_t column_count;
     struct column* columns;  //указатель на начало св. списка
     struct column* last_column; //указатель на послежний элемнт списка колонок
-
     uint64_t row_length;
 };
 
@@ -84,8 +84,11 @@ void fill_with_string(struct row* row, char* value, uint32_t offset, uint32_t st
 void fill_with_float(struct row* row, double value, uint32_t offset);
 int32_t column_offset(const struct column* column_list, const size_t len, const char* name);
 void fill_row_attribute(struct row* row, const char* column_name, enum data_type column_type, void* value);
+
 void insert_row_to_table(struct row* row);
+void select_row_from_table(struct query* query);
 void delete_row_from_table(struct row* row);
 void update_row_in_table(struct row* row);
+
 
 #endif

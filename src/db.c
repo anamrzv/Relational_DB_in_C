@@ -1,7 +1,7 @@
 #include "../include/db.h"
 #include "../include/file.h"
 
-struct page* create_page(struct database_header* db_header, struct table_header* table_header) {
+struct page_header* create_page(struct database_header* db_header, struct table_header* table_header) {
      struct page_header* created_page_header = malloc(sizeof (struct page_header));
     if (created_page_header == NULL) {
         return NULL;
@@ -35,7 +35,7 @@ struct page_header* add_tech_page(struct database_header* db_header) {
     } else return NULL;
 }
 
-struct page* add_page(struct table_header* table_header, struct database_header* db_header) {
+struct page_header* add_page(struct table_header* table_header, struct database_header* db_header) {
     db_header->page_count += 1;
     table_header->page_count += 1;
     struct page_header* new_page_header = create_page(db_header, table_header);
@@ -120,8 +120,10 @@ struct database* get_database_from_file(const char *const filename) {
 }
 
 struct table* create_table_from_schema(struct table_schema* schema, const char* table_name, struct database* db) {
-    if (table_exists(db->database_file, db->database_header->table_count, table_name)) {
+    struct table_header* th = malloc(sizeof(struct table_header));
+    if (table_exists(db->database_file, db->database_header->table_count, table_name, th)) {
         printf("Таблица с таким именем существует. Нельзя создать.");
+        free(th);
         return NULL;
     }
     struct table* created_table = malloc(sizeof(struct table));
@@ -144,9 +146,9 @@ struct table* create_table_from_schema(struct table_schema* schema, const char* 
     db->database_header->table_count += 1;
     table_header->number_in_tech_page = db->database_header->table_count;
     
-    write_header_to_tech_page(db->database_file, db->database_header, new_page_header);
+    write_header_to_tech_page(db->database_file, db->database_header, table_header);
     overwrite_dh_after_change(db->database_file, db->database_header);
-    write_table_page_first_time(db->database_file, new_page_header);
+    write_table_page(db->database_file, new_page_header, created_table->table_schema);
 
     return created_table;
 }
@@ -191,3 +193,30 @@ struct table* get_table(const char* tablename, struct database* db) {
     }
 }
 
+struct query* create_query(enum query_type type, struct table* tables, char** columns, void* values, int32_t row_count) {
+    struct query* new_query= malloc(sizeof(struct query));
+    new_query->type = type;
+    new_query->table = tables;
+    new_query->column_names = *columns;
+    new_query->column_values = values;
+    new_query->rows_number = row_count;
+
+    return new_query;
+}
+
+void run_query(struct query* query) {
+    switch (query->type) {
+            case SELECT_WHERE:
+                select_row_from_table(query);
+                break;
+            case UPDATE_WHERE:
+                //TODO update_row_in_table();
+                break;
+            case DELETE_WHERE:
+                //TODO delete_row_from_table();
+                break;
+            case SELECT:
+                //TODO
+                break;
+    }
+}
