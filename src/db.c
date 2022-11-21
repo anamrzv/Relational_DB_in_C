@@ -63,7 +63,7 @@ struct database* create_database_in_file(const char *const filename) {
     struct database* db = malloc(sizeof(struct database) + sizeof(struct database_header));
 
     FILE *in = NULL;
-    switch (open_file(&in, filename, "w+"))
+    switch (open_file(&in, filename, "wb+"))
     {
     case OPEN_ERROR:
         printf("Ошибка при создании файла");
@@ -97,7 +97,7 @@ struct database* get_database_from_file(const char *const filename) {
     struct database_header* db_header = malloc(sizeof(struct database_header));
 
     FILE *in = NULL;
-    switch (open_file(&in, filename, "r+"))
+    switch (open_file(&in, filename, "rb+"))
     {
     case OPEN_ERROR:
         printf("Ошибка при открытии файла\n");

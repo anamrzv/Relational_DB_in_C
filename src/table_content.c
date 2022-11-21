@@ -43,7 +43,7 @@ int32_t column_offset(const struct column* column_list, const size_t len, const 
         while (index != len) {
             struct column col = column_list[index]; 
             uint32_t b = column_list[index].size;
-            if (strcmp(column_list[index].name, name) == 0) return offset; //!!!
+            if (strcmp(column_list[index].name, name) == 0) return offset;
             index++;
             offset += b;
         }
@@ -70,7 +70,7 @@ void fill_row_attribute(struct row* row, const char* column_name, enum data_type
                 fill_with_float(row, *((double*) value), offset);
                 break;
         }
-    } else printf("Колонки с таким названием не существует\n");   
+    } else printf("Невозможно заполнить строку: Колонки с таким названием атибута не существует\n");   
 }
 
 void insert_row_to_table(struct row* row) {
@@ -84,7 +84,6 @@ void select_row_from_table(struct query* query) {
     enum data_type column_type;
     char column_name[MAX_COLUMN_NAME_LEN];
     uint16_t column_size = 0;
-    //read_columns_of_table(query->table->table_header->db->database_file, query->table);
     
     for (size_t i=0; i<query->table->table_schema->column_count; i++) {
         if (strcmp(query->table->table_schema->columns[i].name, query->column_name) == 0) {
@@ -98,7 +97,7 @@ void select_row_from_table(struct query* query) {
     if (column_exists) {
         uint32_t offset = column_offset(query->table->table_schema->columns, query->table->table_schema->column_count, column_name);
         select_where(query->table->table_header->db->database_file, query->table, offset, column_size, query->column_value, column_type, query->rows_number);
-    } else printf("Колонки с таким названием нет в этой таблице\n");
+    } else printf("Невозможно выполнить запрос по вашему условию: колонки из запроса нет в таблице\n");
 }
 
 void delete_row_from_table(struct row* row) {

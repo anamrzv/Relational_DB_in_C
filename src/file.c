@@ -7,7 +7,7 @@ enum open_status open_file(FILE **in, const char *const filename, const char *co
 }
 
 enum close_status close_file(FILE *in) {
-    if (fclose(in) == 0)return CLOSE_OK;
+    if (fclose(in) == 0) return CLOSE_OK;
     else return CLOSE_ERROR;
 }
 
@@ -77,7 +77,9 @@ enum write_status write_table_page(FILE *file, struct page_header* page_to_write
         cur = cur->next;
     }
 
+    fseek(file, (page_to_write->page_number_general-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header), SEEK_SET);
     if (fwrite(&size_of_column_array, sizeof(uint16_t), 1, file) != 1) return WRITE_ERROR; //записали размер массива колонок
+    fseek(file, (page_to_write->page_number_general-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t), SEEK_SET);
     if (fwrite(columns_array, size_of_column_array, 1, file) != 1) return WRITE_ERROR; //записали массив колонок
     free(columns_array);
     return WRITE_OK;
@@ -96,7 +98,8 @@ enum write_status write_row_to_page(FILE *file, uint32_t page_to_write_num, stru
             fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header), SEEK_SET);
             uint16_t size_of_column_array;
             fread(&size_of_column_array, sizeof(uint16_t), 1, file);
-            struct column* columns;
+            struct column* columns = malloc(sizeof(struct column)*row->table->table_header->schema.column_count);
+            fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t), SEEK_SET);
             fread(columns, size_of_column_array, 1, file);
 
             page_to_write_num = new_page_header->page_number_general;
@@ -111,6 +114,7 @@ enum write_status write_row_to_page(FILE *file, uint32_t page_to_write_num, stru
         }
         fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B + ph_to_write->free_space_cursor, SEEK_SET);
         if (fwrite(row->row_header, sizeof(struct row_header), 1, file) == 1) { 
+            fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B + ph_to_write->free_space_cursor+sizeof(struct row_header), SEEK_SET);
             if (fwrite(row->content, row_len, 1, file) == 1) {
                 ph_to_write->free_bytes -= sizeof(struct row_header) + row_len;
                 ph_to_write->free_space_cursor += sizeof(struct row_header) + row_len;
@@ -169,22 +173,20 @@ bool table_exists(FILE *file, const size_t len, const char* name, struct table_h
 }
 
 enum read_status read_columns_of_table(FILE *file, struct table* table) {
-    fseek(file, (table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header), SEEK_SET);
-    uint16_t size_of_column_array;
-    fread(&size_of_column_array, sizeof(uint16_t), 1, file);
-    fseek(file, (table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t), SEEK_SET);
+    uint16_t* size_of_column_array = malloc(sizeof(uint16_t));
     struct column* columns = malloc(sizeof(struct column)*table->table_header->schema.column_count);
-    fread(columns, size_of_column_array, 1, file);
+    fseek(file, (table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header), SEEK_SET);
+    fread(size_of_column_array, sizeof(uint16_t), 1, file);
+    fread(columns, *size_of_column_array, 1, file);
     table->table_schema->columns = columns;
     table->table_schema->column_count = table->table_header->schema.column_count;
     table->table_schema->last_column = NULL;
     table->table_schema->row_length = table->table_header->schema.row_length;
-    table->table_header->schema.columns = columns; //check
     return READ_OK;
 }
 
 bool compare_int(char* pointer_to_read_row, void* column_value, uint32_t offset) {
-    int32_t* value_to_compare = (int32_t*) pointer_to_read_row + offset; //по этому адресу лежит чиселко
+    int32_t* value_to_compare = (int32_t*) pointer_to_read_row + offset;
     int32_t given_value = *((int32_t*) column_value);
     if (*value_to_compare == given_value) return true;
     return false;
@@ -199,16 +201,7 @@ bool compare_bool(char* pointer_to_read_row, void* column_value, uint32_t offset
 
 bool compare_string(char* pointer_to_read_row, void* column_value, uint32_t offset, uint16_t column_size) {
     char* value_to_compare = (char*) pointer_to_read_row + offset; 
-    //printf("\nБыло %s", value_to_compare);
-    //printf("\ndlina %d", strlen(value_to_compare));
     char* given_value = *((char**) column_value);
-
-    // char* dest = malloc(sizeof(char)*column_size);
-    // strncpy(dest, "", column_size);
-    // strncpy(dest, given_value, strlen(given_value));
-    // printf("\nСтало %s", dest);
-    
-    //strncpy(dest, value_to_compare, column_size);
     if (strcmp(value_to_compare, given_value) == 0) return true;
     return false;
 }
@@ -239,7 +232,7 @@ void select_where(FILE *file, struct table* table, uint32_t offset, uint16_t col
 
         while (current_pointer != ph->free_space_cursor) {
 
-            fread(rh, sizeof(struct row_header), 1, file); //!!!
+            fread(rh, sizeof(struct row_header), 1, file);
             if (rh->valid) {
                 fread(pointer_to_read_row, table->table_schema->row_length, 1, file); //прочитали всю строку и у нас есть указатель на нее
                 switch (type) {
