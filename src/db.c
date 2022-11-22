@@ -28,7 +28,7 @@ struct page_header* add_tech_page(struct database_header* db_header) {
     struct page_header* new_page_header = create_page(db_header, NULL);
     if (new_page_header != NULL) {
         if (db_header->last_page_general_number != 0) {
-            //TODO overwrite page header with new "next_page_number_general"
+            overwrite_previous_last_page_db(db_header->db->database_file, db_header, new_page_header->page_number_general);
         }
         db_header->last_page_general_number = new_page_header->page_number_general;
         return new_page_header;
@@ -41,7 +41,7 @@ struct page_header* add_page(struct table_header* table_header, struct database_
     struct page_header* new_page_header = create_page(db_header, table_header);
     if (new_page_header != NULL) {
         if (table_header->last_page_general_number != 0) {
-            //TODO overwrite page header with new "next_page_number_general"
+            overwrite_previous_last_page_db(db_header->db->database_file, table_header, new_page_header->page_number_general);
         } else {
             table_header->first_page_general_number = new_page_header->page_number_general;
         }
@@ -194,7 +194,7 @@ struct table* get_table(const char* tablename, struct database* db) {
     }
 }
 
-struct query* create_query(enum query_type type, struct table* tables, char* column, void* values, int32_t row_count) {
+struct query* create_query(enum query_type type, struct table* tables, char* column[], void* values[], int32_t row_count) {
     struct query* new_query= malloc(sizeof(struct query));
     new_query->type = type;
     new_query->table = tables;
@@ -211,13 +211,10 @@ void run_query(struct query* query) {
                 select_row_from_table(query);
                 break;
             case UPDATE_WHERE:
-                //TODO update_row_in_table();
+                update_row_in_table(query);
                 break;
             case DELETE_WHERE:
-                //TODO delete_row_from_table();
-                break;
-            case SELECT:
-                //TODO
-                break;
+                delete_row_from_table(query);
+                break;            
     }
 }

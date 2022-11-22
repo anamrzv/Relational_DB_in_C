@@ -68,22 +68,35 @@ void read_db() {
     fill_row_attribute(row1, "name", TYPE_STRING, (void*) &changed_name);
     insert_row_to_table(row1);
     
+    // printf("Query 1\n");
+    // char* column[1] = {"age"};
+    // uint32_t value[1] = {20};
+    // struct query* select_query = create_query(SELECT_WHERE, my_first_table, column, (void*) &value, -1);
+    // run_query(select_query);
+
     printf("Query 1\n");
-    char* column = "age";
-    uint32_t value = 20;
-    struct query* select_query = create_query(SELECT_WHERE, my_first_table, column, (void*) &value, -1);
+    char* column[1] = {"age"};
+    uint32_t value[1] = {20};
+    struct query* select_query = create_query(SELECT_WHERE, my_first_table, column, value, -1);
     run_query(select_query);
 
     printf("Query 2\n");
-    char* column2 = "name";
-    char* value2 = "Nastya";
-    struct query* select_query_2 = create_query(SELECT_WHERE, my_first_table, column2, (void*) &value2, -1);
+    char* column2[1] = {"name"};
+    char* value2[1] = {"Nastya"};
+    struct query* select_query_2 = create_query(SELECT_WHERE, my_first_table, column2, value2, -1);
     run_query(select_query_2);
 
     printf("Query 3\n");
-    char* column3 = "male";
-    bool value3 = true;
-    struct query* select_query_3 = create_query(SELECT_WHERE, my_first_table, column3, (void*) &value3, -1);
+    char* column3[1] = {"male"};
+    bool value3[1] = {true};
+    struct query* select_query_3 = create_query(SELECT_WHERE, my_first_table, column3, value3, -1);
+    run_query(select_query_3);
+
+    printf("Query 4\n");
+    char* columns[2] = {"name", "age"};
+    void* values[2] = {"Nastya", 101};
+
+    struct query* select_query_3 = create_query(UPDATE_WHERE, my_first_table, columns, values, -1);
     run_query(select_query_3);
 
 }
