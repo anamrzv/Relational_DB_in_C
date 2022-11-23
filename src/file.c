@@ -1,4 +1,5 @@
 #include "../include/file.h"
+#include "../include/query.h"
 
 enum open_status open_file(FILE **in, const char *const filename, const char *const mode) {
     *in = fopen(filename, mode);
@@ -93,12 +94,11 @@ enum write_status write_row_to_page(FILE *file, uint32_t page_to_write_num, stru
     if (fread(ph_to_write, sizeof(struct page_header), 1, file) == 1) {
         if (!enough_free_space(ph_to_write, sum_volume)) {
             struct page_header* new_page_header = add_page(row->table->table_header, row->table->table_header->db->database_header);
-            if (overwrite_dh_after_change(file, row->table->table_header->db->database_header) != WRITE_OK) return WRITE_ERROR;
             
             fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header), SEEK_SET);
             uint16_t size_of_column_array;
             fread(&size_of_column_array, sizeof(uint16_t), 1, file);
-            struct column* columns = malloc(sizeof(struct column)*row->table->table_header->schema.column_count);
+            struct column* columns = malloc(size_of_column_array);
             fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t), SEEK_SET);
             fread(columns, size_of_column_array, 1, file);
 
@@ -128,6 +128,30 @@ enum write_status write_row_to_page(FILE *file, uint32_t page_to_write_num, stru
     } else return WRITE_ERROR;
     
 }
+
+
+// enum write_status overwrite_row(FILE *file, uint32_t page_to_write_num, struct row* row) {
+//     uint32_t row_len = row->table->table_header->schema.row_length;
+//     fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
+//     struct page_header* ph_to_write = malloc(sizeof(struct page_header));
+//     if (fread(ph_to_write, sizeof(struct page_header), 1, file) == 1) {
+//         fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B + ph_to_write->free_space_cursor, SEEK_SET);
+//         if (fwrite(row->row_header, sizeof(struct row_header), 1, file) == 1) { 
+//             fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B + ph_to_write->free_space_cursor+sizeof(struct row_header), SEEK_SET);
+//             if (fwrite(row->content, row_len, 1, file) == 1) {
+//                 ph_to_write->free_bytes -= sizeof(struct row_header) + row_len;
+//                 ph_to_write->free_space_cursor += sizeof(struct row_header) + row_len;
+
+//                 fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
+//                 if (fwrite(ph_to_write, sizeof(struct page_header), 1, file) != 1) return WRITE_ERROR;
+//                 return WRITE_OK;
+//             }
+//         }
+//         return WRITE_ERROR;
+//     } else return WRITE_ERROR;
+    
+// }
+
 
 enum read_status read_database_header(FILE *file, struct database_header* db_header) {
    fseek(file, 0, SEEK_SET);
@@ -213,36 +237,31 @@ bool compare_float(char* pointer_to_read_row, void* column_value, uint32_t offse
     return false;
 }
 
-//TODO change code
-bool update_int(char* pointer_to_read_row, void* column_value, uint32_t offset) {
-    int32_t* value_to_compare = (int32_t*) pointer_to_read_row + offset;
+void update_int(char* pointer_to_read_row, void* column_value, uint32_t offset) {
+    int32_t* value_to_change = (int32_t*) pointer_to_read_row + offset;
     int32_t given_value = *((int32_t*) column_value);
-    if (*value_to_compare == given_value) return true;
-    return false;
+    *value_to_change = given_value; 
 }
 
-bool update_bool(char* pointer_to_read_row, void* column_value, uint32_t offset) {
-    bool* value_to_compare = (bool*) pointer_to_read_row + offset;
+void update_bool(char* pointer_to_read_row, void* column_value, uint32_t offset) {
+    bool* value_to_change = (bool*) pointer_to_read_row + offset;
     bool given_value = *((bool*) column_value);
-    if (*value_to_compare == given_value) return true;
-    return false;
+    *value_to_change = given_value; 
 }
 
-bool update_string(char* pointer_to_read_row, void* column_value, uint32_t offset, uint16_t column_size) {
-    char* value_to_compare = (char*) pointer_to_read_row + offset; 
+void update_string(char* pointer_to_read_row, void* column_value, uint32_t offset, uint16_t column_size) {
+    char* value_to_change = (char*) pointer_to_read_row + offset; 
     char* given_value = *((char**) column_value);
-    if (strcmp(value_to_compare, given_value) == 0) return true;
-    return false;
+    strcpy(value_to_change, given_value);
 }
 
-bool update_float(char* pointer_to_read_row, void* column_value, uint32_t offset) {
-    double* value_to_compare = (double*) pointer_to_read_row + offset;
+void update_float(char* pointer_to_read_row, void* column_value, uint32_t offset) {
+    double* value_to_change = (double*) pointer_to_read_row + offset;
     double given_value = *((double*) column_value);
-    if (*value_to_compare == given_value) return true;
-    return false;
+    *value_to_change = given_value; 
 }
 
-//TODO table num in tech page поправить
+//TODO: table num in tech page и row count поправить
 void select_where(FILE *file, struct table* table, uint32_t offset, uint16_t column_size, void* column_value, enum data_type type, int32_t row_count) {
     uint32_t current_pointer = sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count;
     struct row_header* rh =  malloc(sizeof(struct row_header));
@@ -256,8 +275,10 @@ void select_where(FILE *file, struct table* table, uint32_t offset, uint16_t col
 
         while (current_pointer != ph->free_space_cursor) {
 
+            fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer, SEEK_SET); //TODO: check
             fread(rh, sizeof(struct row_header), 1, file);
             if (rh->valid) {
+                fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer+sizeof(struct row_header), SEEK_SET); //TODO: check
                 fread(pointer_to_read_row, table->table_schema->row_length, 1, file); //прочитали всю строку и у нас есть указатель на нее
                 switch (type) {
                     case TYPE_INT32:
@@ -281,7 +302,7 @@ void select_where(FILE *file, struct table* table, uint32_t offset, uint16_t col
                 current_pointer = sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count;
                 fseek(file, (ph->next_page_number_general-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
                 fread(ph, sizeof(struct page_header), 1, file);
-                fseek(file, sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count, SEEK_CUR);
+                fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count, SEEK_SET);
             }
     
         }
@@ -301,32 +322,36 @@ void update_where(FILE *file, struct table* table, struct expanded_query* first,
 
         while (current_pointer != ph->free_space_cursor) {
 
+            fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer, SEEK_SET);
             fread(rh, sizeof(struct row_header), 1, file);
             if (rh->valid) {
+                uint32_t pointer_to_update = current_pointer + sizeof(struct row_header);
                 fread(pointer_to_read_row, table->table_schema->row_length, 1, file); //прочитали всю строку и у нас есть указатель на нее
+                
                 switch (first->column_type) {
                     case TYPE_INT32:
-                        if (compare_int(pointer_to_read_row, column_values[0], first->offset)) update_content(pointer_to_read_row, column_values[1], second, table->table_schema->columns, table->table_schema->column_count);
+                        if (compare_int(pointer_to_read_row, column_values[0], first->offset)) update_content(pointer_to_read_row, column_values[1], second, table, pointer_to_update, ph->page_number_general);
                         break;
                     case TYPE_BOOL:
-                        if (compare_bool(pointer_to_read_row, column_values[0], first->offset)) update_content(pointer_to_read_row, column_values[1], second, table->table_schema->columns, table->table_schema->column_count);
+                        if (compare_bool(pointer_to_read_row, column_values[0], first->offset)) update_content(pointer_to_read_row, column_values[1], second, table, pointer_to_update, ph->page_number_general);
                         break;
                     case TYPE_STRING:
-                        if (compare_string(pointer_to_read_row, column_values[0], first->offset, first->column_size)) update_content(pointer_to_read_row, column_values[1], second, table->table_schema->columns, table->table_schema->column_count);
+                        if (compare_string(pointer_to_read_row, column_values[0], first->offset, first->column_size)) update_content(pointer_to_read_row, column_values[1], second, table, pointer_to_update, ph->page_number_general);
                         break;
                     case TYPE_FLOAT:
-                        if (compare_float(pointer_to_read_row, column_values[0], first->offset)) update_content(pointer_to_read_row, column_values[1], second, table->table_schema->columns, table->table_schema->column_count);
+                        if (compare_float(pointer_to_read_row, column_values[0], first->offset)) update_content(pointer_to_read_row, column_values[1], second, table, pointer_to_update, ph->page_number_general);
                         break;
                 }
+                current_pointer += sizeof(struct row_header)+table->table_schema->row_length;
+            } else {
+                current_pointer += sizeof(struct row_header)+table->table_schema->row_length;
             }
-
-            current_pointer += sizeof(struct row_header)+table->table_schema->row_length;
 
             if (ph->next_page_number_general != 0 && current_pointer == ph->free_space_cursor) {
                 current_pointer = sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count;
                 fseek(file, (ph->next_page_number_general-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
                 fread(ph, sizeof(struct page_header), 1, file);
-                fseek(file, sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count, SEEK_CUR);
+                fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count, SEEK_SET);
             }
     
         }
@@ -375,7 +400,7 @@ void print_passed_content(char* row_start, struct column* columns, uint16_t len)
     printf("\n");
 }
 
-void update_content(char* row_start, void* column_value, struct expanded_query* second, struct column* columns, uint16_t len) {
+void update_content(char* row_start, void* column_value, struct expanded_query* second, struct table* table, uint32_t pointer_to_update, uint32_t page_general_number) {
     switch (second->column_type) {
         case TYPE_INT32:
             update_int(row_start, column_value, second->offset);
@@ -390,35 +415,50 @@ void update_content(char* row_start, void* column_value, struct expanded_query* 
             update_float(row_start, column_value, second->offset);
             break; 
     }
-    print_passed_content(row_start, columns, len);
+
+    fseek(table->table_header->db->database_file, (page_general_number-1)*DEFAULT_PAGE_SIZE_B+pointer_to_update, SEEK_SET);
+    fwrite(row_start, table->table_schema->row_length, 1, table->table_header->db->database_file);
+
+    print_passed_content(row_start, table->table_schema->columns, table->table_schema->column_count);
 }
 
 enum write_status overwrite_previous_last_page_db(FILE *file, struct database_header* db_header, uint32_t new_next_number) {
     uint32_t old_number = db_header->last_page_general_number;
+    struct page_header* old = malloc(sizeof(struct page_header));
+
     if (db_header->last_page_general_number == 1) fseek(file, sizeof(struct database_header), SEEK_SET);
     else fseek(file, (db_header->last_page_general_number-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
 
-    struct page_header* old = malloc(sizeof(struct page_header));
     fread(old, sizeof(struct page_header), 1, file);
     old->next_page_number_general = new_next_number; 
 
     if (old_number == 1) fseek(file, sizeof(struct database_header), SEEK_SET);
     else fseek(file, (old_number-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
     
-    if (fwrite(old, sizeof(struct page_header), 1, file) == 1) return WRITE_OK;
-    else return WRITE_ERROR;
+    if (fwrite(old, sizeof(struct page_header), 1, file) == 1) {
+        free(old);
+        return WRITE_OK;
+    }
+    else {
+        free(old);
+        return WRITE_ERROR;
+    }
 }
 
-enum write_status overwrite_previous_last_page(FILE *file, struct table_header* th, uint32_t new_next_number) {
-    uint32_t old_number = th->last_page_general_number;
-    fseek(file, (th->last_page_general_number-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
-
+enum write_status overwrite_previous_last_page(FILE *file, uint32_t previous_last_page_number, uint32_t new_next_number) {
     struct page_header* old = malloc(sizeof(struct page_header));
+
+    fseek(file, (previous_last_page_number-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
     fread(old, sizeof(struct page_header), 1, file);
     old->next_page_number_general = new_next_number; 
 
-    fseek(file, (old_number-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
-    
-    if (fwrite(old, sizeof(struct page_header), 1, file) == 1) return WRITE_OK;
-    else return WRITE_ERROR;
+    fseek(file, (previous_last_page_number-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
+    if (fwrite(old, sizeof(struct page_header), 1, file) == 1) {
+        free(old);
+        return WRITE_OK;
+    }
+    else {
+        free(old);
+        return WRITE_ERROR;
+    }
 }

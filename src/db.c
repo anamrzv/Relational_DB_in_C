@@ -1,5 +1,6 @@
 #include "../include/db.h"
 #include "../include/file.h"
+#include "../include/query.h"
 
 struct page_header* create_page(struct database_header* db_header, struct table_header* table_header) {
      struct page_header* created_page_header = malloc(sizeof (struct page_header));
@@ -16,6 +17,7 @@ struct page_header* create_page(struct database_header* db_header, struct table_
     if (table_header == NULL) {
         strncpy(created_page_header->table_name, "", MAX_TABLE_NAME_LEN);
     } else {
+        created_page_header->table_number_in_tech_page = table_header->number_in_tech_page;
         strncpy(created_page_header->table_name, "", MAX_TABLE_NAME_LEN);
         strncpy(created_page_header->table_name, table_header->name, MAX_TABLE_NAME_LEN);
     }
@@ -31,6 +33,7 @@ struct page_header* add_tech_page(struct database_header* db_header) {
             overwrite_previous_last_page_db(db_header->db->database_file, db_header, new_page_header->page_number_general);
         }
         db_header->last_page_general_number = new_page_header->page_number_general;
+        if (db_header->page_count!=1) overwrite_dh_after_change(db_header->db->database_file, db_header);
         return new_page_header;
     } else return NULL;
 }
@@ -41,11 +44,15 @@ struct page_header* add_page(struct table_header* table_header, struct database_
     struct page_header* new_page_header = create_page(db_header, table_header);
     if (new_page_header != NULL) {
         if (table_header->last_page_general_number != 0) {
-            overwrite_previous_last_page_db(db_header->db->database_file, table_header, new_page_header->page_number_general);
+            overwrite_previous_last_page(db_header->db->database_file, table_header->last_page_general_number, new_page_header->page_number_general);
         } else {
             table_header->first_page_general_number = new_page_header->page_number_general;
         }
         table_header->last_page_general_number = new_page_header->page_number_general;
+        if (table_header->page_count != 1) {
+            overwrite_th_after_change(db_header->db->database_file, table_header);
+            overwrite_dh_after_change(db_header->db->database_file, db_header);
+        }
         return new_page_header;
     }
 }
@@ -194,9 +201,9 @@ struct table* get_table(const char* tablename, struct database* db) {
     }
 }
 
-struct query* create_query(enum query_type type, struct table* tables, char* column[], void* values[], int32_t row_count) {
+struct query* create_query(enum query_type q_type, struct table* tables, char* column[], void* values[], int32_t row_count) {
     struct query* new_query= malloc(sizeof(struct query));
-    new_query->type = type;
+    new_query->q_type = q_type;
     new_query->table = tables;
     new_query->column_name = column;  
     new_query->column_value = values;
@@ -206,7 +213,7 @@ struct query* create_query(enum query_type type, struct table* tables, char* col
 }
 
 void run_query(struct query* query) {
-    switch (query->type) {
+    switch (query->q_type) {
             case SELECT_WHERE:
                 select_row_from_table(query);
                 break;
@@ -214,7 +221,7 @@ void run_query(struct query* query) {
                 update_row_in_table(query);
                 break;
             case DELETE_WHERE:
-                delete_row_from_table(query);
+                //delete_row_from_table(query);
                 break;            
     }
 }

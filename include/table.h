@@ -7,17 +7,26 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <malloc.h>
-#include "./file.h"
-#include "./query.h" 
+#include "file.h"
+#include "query.h"
 
 #define MAX_NAME_LEN 20
 #define MAX_DATATYPE_LEN 10
+
+struct query;
 
 enum data_type {
     TYPE_INT32 = 0,
     TYPE_BOOL,
     TYPE_STRING,
     TYPE_FLOAT
+};
+
+struct expanded_query {
+    enum data_type column_type;
+    char column_name[MAX_COLUMN_NAME_LEN];
+    uint16_t column_size;
+    uint32_t offset;
 };
 
 struct column {
@@ -83,13 +92,13 @@ void fill_with_int(struct row* row, int32_t value, uint32_t offset);
 void fill_with_bool(struct row* row, bool value, uint32_t offset);
 void fill_with_string(struct row* row, char* value, uint32_t offset, uint32_t string_len);
 void fill_with_float(struct row* row, double value, uint32_t offset);
-int32_t column_offset(const struct column* column_list, const size_t len, const char* name);
-void fill_row_attribute(struct row* row, const char* column_name, enum data_type column_type, void* value);
+int32_t column_offset(const struct column* column_list, const size_t len, char* name);
+void fill_row_attribute(struct row* row, char* column_name, enum data_type column_type, void* value);
 
 void insert_row_to_table(struct row* row);
-void select_row_from_table(struct query* query);
-void delete_row_from_table(struct row* row);
-void update_row_in_table(struct row* row);
 
+void select_row_from_table(struct query* query);
+void update_row_in_table(struct query* query);
+void delete_row_from_table(struct query* query);
 
 #endif

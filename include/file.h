@@ -15,6 +15,7 @@ struct row;
 struct page_header;
 struct column;
 struct table;
+struct expanded_query;
 
 enum open_status  {
   OPEN_OK = 0,
@@ -56,7 +57,15 @@ bool compare_int(char* pointer_to_read_row, void* column_value, uint32_t offset)
 bool compare_bool(char* pointer_to_read_row, void* column_value, uint32_t offset);
 bool compare_string(char* pointer_to_read_row, void* column_value, uint32_t offset, uint16_t column_size);
 bool compare_float(char* pointer_to_read_row, void* column_value, uint32_t offset);
+
+void update_int(char* pointer_to_read_row, void* column_value, uint32_t offset);
+void update_bool(char* pointer_to_read_row, void* column_value, uint32_t offset);
+void update_string(char* pointer_to_read_row, void* column_value, uint32_t offset, uint16_t column_size);
+void update_float(char* pointer_to_read_row, void* column_value, uint32_t offset);
+
 void select_where(FILE *file, struct table* table, uint32_t offset, uint16_t column_size, void* column_value, enum data_type type, int32_t row_count);
+void update_where(FILE *file, struct table* table, struct expanded_query* first, struct expanded_query* second, void** column_values);
+
 
 void print_int(char* row_start, uint32_t offset);
 void print_bool(char* row_start, uint32_t offset);
@@ -64,7 +73,9 @@ void print_string(char* row_start, uint32_t offset);
 void print_float(char* row_start, uint32_t offset);
 void print_passed_content(char* row_start, struct column* columns, uint16_t len);
 
-
+void update_content(char* row_start, void* column_value, struct expanded_query* second, struct table* table, uint32_t pointer_to_update, uint32_t page_general_number);
+enum write_status overwrite_previous_last_page_db(FILE *file, struct database_header* db_header, uint32_t new_next_number);
+enum write_status overwrite_previous_last_page(FILE *file, uint32_t previous_last_page_number, uint32_t new_next_number);
 
 
 #endif
