@@ -70,8 +70,6 @@ struct column* delete_column_from_list(struct column* cur, const char* column_na
     }
 }
 
-
-
 struct column* create_column(const char* column_name, enum data_type column_type ) {
     struct column* created_column = malloc(sizeof (struct column));
     if (created_column == NULL) {
@@ -126,6 +124,11 @@ struct table_schema* create_table_schema() {
     return schema;
 }
 
+void close_table_schema(struct table_schema* schema) {
+    destroy_column_list(schema->columns);
+    free(schema);
+}
+
 struct table_schema* add_column_to_schema(struct table_schema* schema, const char* column_name, enum data_type column_type) {
     if (column_exists(schema->columns, schema->column_count, column_name) == 0) {
         add_back_column_to_list(schema, column_name, column_type);
@@ -149,7 +152,6 @@ struct table_schema* add_string_column_to_schema(struct table_schema* schema, co
         return schema;
     }
 }
-
 
 struct table_schema* delete_column_from_schema(struct table_schema* schema, const char* column_name) {
     uint32_t col_size = column_exists(schema->columns, schema->column_count, column_name);

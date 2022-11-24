@@ -7,11 +7,9 @@
 
 #define MAX_TABLE_NAME_LEN 20
 #define MAX_COLUMN_NAME_LEN 20
-#define INITIAL_ARRAY_SIZE 1
 
 enum query_type {
-    SELECT = 0,
-    SELECT_WHERE,
+    SELECT_WHERE = 0,
     UPDATE_WHERE,
     DELETE_WHERE,
 };

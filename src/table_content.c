@@ -12,7 +12,12 @@ struct row* create_row(struct table* table) {
     return new_row;
 }
 
-//TODO проверка что имя колонки и тип правильные
+void close_row(struct row* row) {
+    free(row->row_header);
+    free(row->content);
+    free(row);
+}
+
 void fill_with_int(struct row* row, int32_t value, uint32_t offset) {
     char* pointer_to_write = (char*) row->content + offset;
     *((int32_t*) (pointer_to_write)) = value;
@@ -144,6 +149,8 @@ void update_row_in_table(struct query* query) {
         strncpy(second_expanded->column_name, second_column_name, MAX_COLUMN_NAME_LEN);
 
         update_where(query->table->table_header->db->database_file, query->table, first_expanded, second_expanded, query->column_value);
+        free(first_expanded);
+        free(second_expanded);
     } else printf("Невозможно выполнить запрос по вашему условию: колонки_ок из запроса нет в таблице\n");
 }
 
@@ -174,6 +181,7 @@ void delete_row_from_table(struct query* query) {
         strncpy(expanded->column_name, column_name, MAX_COLUMN_NAME_LEN);
 
         delete_where(query->table->table_header->db->database_file, query->table, expanded, query->column_value[0]);
+        free(expanded);
     } else printf("Невозможно выполнить запрос по вашему условию: колонки из запроса нет в таблице\n");
 }
 

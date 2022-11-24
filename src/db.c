@@ -3,7 +3,7 @@
 #include "../include/query.h"
 
 struct page_header* create_page(struct database_header* db_header, struct table_header* table_header) {
-     struct page_header* created_page_header = malloc(sizeof (struct page_header));
+    struct page_header* created_page_header = malloc(sizeof (struct page_header));
     if (created_page_header == NULL) {
         return NULL;
     }
@@ -161,6 +161,13 @@ struct table* create_table_from_schema(struct table_schema* schema, const char* 
     return created_table;
 }
 
+void close_table(struct table* created_table) {
+    free(created_table->table_schema->columns);
+    free(created_table->table_header);
+    free(created_table->table_schema);
+    free(created_table);
+}
+
 void delete_table(const char* tablename, struct database* db) {
     struct table_header* th_to_delete = malloc(sizeof(struct table_header));
 
@@ -183,6 +190,8 @@ bool enough_free_space(struct page_header* page_header, uint32_t desired_volume)
 
 void close_database(struct database* db) {
     close_file(db->database_file);
+    free(db->database_header);
+    free(db);
 }
 
 struct table* get_table(const char* tablename, struct database* db) {
@@ -286,5 +295,15 @@ void run_join_query(struct query_join* query) {
         strncpy(second_expanded->column_name, second_column_name, MAX_COLUMN_NAME_LEN);
 
         join(query->left_table->table_header->db->database_file, query->left_table, query->right_table, first_expanded, second_expanded);
+        free(first_expanded);
+        free(second_expanded);
     } else printf("Невозможно выполнить запрос по вашему условию: колонки_ок из запроса нет в таблице\n");
+}
+
+void close_query(struct query* query) {
+    free(query);
+}
+
+void close_join_query(struct query_join* query) {
+    free(query);
 }

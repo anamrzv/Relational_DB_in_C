@@ -23,12 +23,14 @@ enum write_status write_db_to_file(FILE *file, struct database_header* db_header
 }
 
 enum write_status write_header_to_tech_page(FILE *file, struct database_header* db_header, struct table_header* new_table_header) {
+    struct page_header* new_page_header = NULL;
+    
     if (db_header->last_page_general_number == 1) fseek(file, sizeof(struct database_header), SEEK_SET);
     else fseek(file, (db_header->last_page_general_number-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
     struct page_header* tech_page_header = malloc(sizeof(struct page_header));
     fread(tech_page_header, sizeof(struct page_header), 1, file);
     if (!enough_free_space(tech_page_header, sizeof(struct table_header))) {
-        struct page_header* new_page_header = add_tech_page(db_header);
+        new_page_header = add_tech_page(db_header);
         tech_page_header = new_page_header;
         if (overwrite_dh_after_change(file, db_header) != WRITE_OK) return WRITE_ERROR;
 
@@ -45,8 +47,14 @@ enum write_status write_header_to_tech_page(FILE *file, struct database_header* 
         if (tech_page_header->page_number_general == 1) fseek(file, sizeof(struct database_header), SEEK_SET);
         else fseek(file, (tech_page_header->page_number_general-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
         
-        if (fwrite(tech_page_header, sizeof(struct page_header), 1, file) == 1) return WRITE_OK;
+        if (fwrite(tech_page_header, sizeof(struct page_header), 1, file) == 1) {
+            if (new_page_header != NULL) free(new_page_header);
+            free(tech_page_header);
+            return WRITE_OK;
+        }
     }
+    if (new_page_header != NULL) free(new_page_header);
+    free(tech_page_header);
     return WRITE_ERROR;    
 }
 
@@ -82,18 +90,21 @@ enum write_status write_table_page(FILE *file, struct page_header* page_to_write
     if (fwrite(&size_of_column_array, sizeof(uint16_t), 1, file) != 1) return WRITE_ERROR; //записали размер массива колонок
     fseek(file, (page_to_write->page_number_general-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t), SEEK_SET);
     if (fwrite(columns_array, size_of_column_array, 1, file) != 1) return WRITE_ERROR; //записали массив колонок
+    
     free(columns_array);
+    free(page_to_write);
     return WRITE_OK;
 }
 
 enum write_status write_row_to_page(FILE *file, uint32_t page_to_write_num, struct row* row) {
+    struct page_header* new_page_header - NULL;
     uint32_t row_len = row->table->table_header->schema.row_length;
     uint32_t sum_volume = sizeof(struct row_header) + row_len;
     fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
     struct page_header* ph_to_write = malloc(sizeof(struct page_header));
     if (fread(ph_to_write, sizeof(struct page_header), 1, file) == 1) {
         if (!enough_free_space(ph_to_write, sum_volume)) {
-            struct page_header* new_page_header = add_page(row->table->table_header, row->table->table_header->db->database_header);
+            new_page_header = add_page(row->table->table_header, row->table->table_header->db->database_header);
             
             fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header), SEEK_SET);
             uint16_t size_of_column_array;
@@ -108,9 +119,10 @@ enum write_status write_row_to_page(FILE *file, uint32_t page_to_write_num, stru
             ph_to_write->free_space_cursor += sizeof(struct page_header)+sizeof(uint16_t)+size_of_column_array;
 
             fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
-            if (fwrite(ph_to_write, sizeof(struct page_header), 1, file) != 1) return WRITE_ERROR;
-            if (fwrite(&size_of_column_array, sizeof(uint16_t), 1, file) != 1) return WRITE_ERROR;
-            if (fwrite(columns, size_of_column_array, 1, file) != 1) return WRITE_ERROR;
+            fwrite(ph_to_write, sizeof(struct page_header), 1, file);
+            fwrite(&size_of_column_array, sizeof(uint16_t), 1, file);
+            fwrite(columns, size_of_column_array, 1, file);
+            free(columns);
         }
         fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B + ph_to_write->free_space_cursor, SEEK_SET);
         if (fwrite(row->row_header, sizeof(struct row_header), 1, file) == 1) { 
@@ -120,13 +132,24 @@ enum write_status write_row_to_page(FILE *file, uint32_t page_to_write_num, stru
                 ph_to_write->free_space_cursor += sizeof(struct row_header) + row_len;
 
                 fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
-                if (fwrite(ph_to_write, sizeof(struct page_header), 1, file) != 1) return WRITE_ERROR;
+                if (fwrite(ph_to_write, sizeof(struct page_header), 1, file) != 1) {
+                    if (new_page_header != NULL) free(new_page_header);
+                    free(ph_to_write);
+                    return WRITE_ERROR;
+                }
+                if (new_page_header != NULL) free(new_page_header);
+                free(ph_to_write);
                 return WRITE_OK;
             }
         }
+        if (new_page_header != NULL) free(new_page_header);
+        free(ph_to_write);
         return WRITE_ERROR;
-    } else return WRITE_ERROR;
-    
+    } else {
+        if (new_page_header != NULL) free(new_page_header);
+        free(ph_to_write);
+        return WRITE_ERROR;
+    }    
 }
 
 enum read_status read_database_header(FILE *file, struct database_header* db_header) {
@@ -154,7 +177,10 @@ bool table_exists(FILE *file, const size_t len, const char* name, struct table_h
         while (index != len) {
 
             fread(cur, sizeof(struct table_header), 1, file);
-            if (cur->valid && strcmp(cur->name, name) == 0) return true;
+            if (cur->valid && strcmp(cur->name, name) == 0) {
+                free(ph);
+                return true;
+            }
 
             index++;
             current_pointer += sizeof(struct table_header);
@@ -165,11 +191,14 @@ bool table_exists(FILE *file, const size_t len, const char* name, struct table_h
             }
     
         }
-
+        free(ph);
         return false;
 
     } 
-    else return false;
+    else { 
+        return false;
+        free(ph);
+    }
 }
 
 enum read_status read_columns_of_table(FILE *file, struct table* table) {
@@ -182,6 +211,7 @@ enum read_status read_columns_of_table(FILE *file, struct table* table) {
     table->table_schema->column_count = table->table_header->schema.column_count;
     table->table_schema->last_column = NULL;
     table->table_schema->row_length = table->table_header->schema.row_length;
+    free(size_of_column_array);
     return READ_OK;
 }
 
@@ -237,7 +267,6 @@ void update_float(char* pointer_to_read_row, void* column_value, uint32_t offset
     *value_to_change = given_value; 
 }
 
-//TODO: table num in tech page и row count поправить
 void select_where(FILE *file, struct table* table, uint32_t offset, uint16_t column_size, void* column_value, enum data_type type, int32_t row_count) {
     uint32_t selected_count = 0;
     uint32_t current_pointer = sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count;
@@ -250,7 +279,7 @@ void select_where(FILE *file, struct table* table, uint32_t offset, uint16_t col
 
     fseek(file, (table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count, SEEK_SET); //передвинулись на начало строк
 
-        while (current_pointer != ph->free_space_cursor) {
+    while (current_pointer != ph->free_space_cursor) {
 
             fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer, SEEK_SET);
             fread(rh, sizeof(struct row_header), 1, file);
@@ -295,6 +324,9 @@ void select_where(FILE *file, struct table* table, uint32_t offset, uint16_t col
             }
     
         }
+    free(rh);
+    free(ph);
+    free(pointer_to_read_row);
     printf("=====================\n");
     printf("Всего %d строк\n", selected_count);
 }
@@ -359,6 +391,9 @@ void update_where(FILE *file, struct table* table, struct expanded_query* first,
             }
     
         }
+    free(rh);
+    free(ph);
+    free(pointer_to_read_row);
     printf("=====================\n");
     printf("Всего %d строк\n", updated_count);
 }
@@ -526,9 +561,10 @@ void delete_where(FILE *file, struct table* table, struct expanded_query* expand
             fread(ph, sizeof(struct page_header), 1, file);
             fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count, SEEK_SET);
         }
-    
     }
-
+    free(rh);
+    free(ph);
+    free(pointer_to_read_row);
     printf("Было удалено %d строк\n", count_of_deleted);
 }
 
@@ -631,7 +667,7 @@ uint32_t try_connect_with_right_table(FILE *file, struct table* left_table, stru
 
     fseek(file, (right_table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*right_table->table_schema->column_count, SEEK_SET); //передвинулись на начало строк
 
-        while (current_pointer != ph->free_space_cursor) {
+    while (current_pointer != ph->free_space_cursor) {
 
             fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer, SEEK_SET);
             fread(rh, sizeof(struct row_header), 1, file);
@@ -672,6 +708,9 @@ uint32_t try_connect_with_right_table(FILE *file, struct table* left_table, stru
             }
     
         }
+    free(rh);
+    free(ph);
+    free(pointer_to_read_row);
 }
 
 
@@ -687,16 +726,13 @@ void join(FILE *file, struct table* left_table, struct table* right_table, struc
 
     fseek(file, (left_table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*left_table->table_schema->column_count, SEEK_SET); //передвинулись на начало строк
 
-        while (current_pointer != ph->free_space_cursor) {
+    while (current_pointer != ph->free_space_cursor) {
 
             fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer, SEEK_SET);
             fread(rh, sizeof(struct row_header), 1, file);
             if (rh->valid) {
                 fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer+sizeof(struct row_header), SEEK_SET);
                 fread(pointer_to_read_row, left_table->table_schema->row_length, 1, file); //прочитали всю строку и у нас есть указатель на нее
-                //передаем строку в метод
-                //там достаем вторую строку которая подходит
-                //выводим
                 joined_count += try_connect_with_right_table(file, left_table, right_table, left_expanded, right_expanded, pointer_to_read_row);        
             }
 
@@ -709,7 +745,10 @@ void join(FILE *file, struct table* left_table, struct table* right_table, struc
                 fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*left_table->table_schema->column_count, SEEK_SET);
             }
     
-        }
+    }
+    free(rh);
+    free(ph);
+    free(pointer_to_read_row);
     printf("=====================\n");
     printf("Всего %d строк\n", joined_count);
 

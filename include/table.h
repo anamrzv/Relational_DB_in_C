@@ -38,8 +38,8 @@ struct column {
 
 struct table_schema {
     uint16_t column_count;
-    struct column* columns;  //указатель на начало св. списка
-    struct column* last_column; //указатель на послежний элемнт списка колонок
+    struct column* columns;  //указатель на начало
+    struct column* last_column; //указатель на последний элемнт списка колонок
     uint64_t row_length;
 };
 
@@ -61,7 +61,7 @@ struct table_header {
 
 struct table {
     struct table_header* table_header;
-    struct table_schema* table_schema; //мб надо убрать указатель
+    struct table_schema* table_schema;
 };
 
 struct row_header {
