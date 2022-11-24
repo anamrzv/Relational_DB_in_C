@@ -44,7 +44,7 @@ struct page_header* add_page(struct table_header* table_header, struct database_
     struct page_header* new_page_header = create_page(db_header, table_header);
     if (new_page_header != NULL) {
         if (table_header->last_page_general_number != 0) {
-            overwrite_previous_last_page(db_header->db->database_file, table_header->last_page_general_number, new_page_header->page_number_general);
+            overwrite_previous_last_page(table_header->db->database_file, table_header->last_page_general_number, new_page_header->page_number_general);
         } else {
             table_header->first_page_general_number = new_page_header->page_number_general;
         }
@@ -116,6 +116,7 @@ struct database* get_database_from_file(const char *const filename) {
 
     enum read_status read_status = read_database_header(in, db_header);
     if (read_status == READ_OK) {
+        db_header->db = db;
         db->database_header = db_header;
         db->database_file = in;
         return db;
@@ -212,6 +213,16 @@ struct query* create_query(enum query_type q_type, struct table* tables, char* c
     return new_query;
 }
 
+struct query_join* create_query_join(struct table* left_table, struct table* right_table, char* left_column, char* right_column) {
+    struct query_join* join_query = malloc(sizeof(struct query_join));
+    join_query->left_table = left_table;
+    join_query->right_table = right_table;
+    join_query->left_column_name = left_column;
+    join_query->right_column_name = right_column;
+
+    return join_query;
+}
+
 void run_query(struct query* query) {
     switch (query->q_type) {
             case SELECT_WHERE:
@@ -224,4 +235,8 @@ void run_query(struct query* query) {
                 delete_row_from_table(query);
                 break;            
     }
+}
+
+void run_join_query(struct query_join* query) {
+    //TODO:
 }

@@ -65,7 +65,8 @@ void close_database(struct database* db);
 struct table* get_table(const char *const tablename, struct database* db);
 
 struct query* create_query(enum query_type type, struct table* tables, char* column[], void* values[], int32_t row_count);
+struct query_join* create_query_join(struct table* left_table, struct table* right_table, char* left_column, char* right_column);
 void run_query(struct query* query);
-
+void run_join_query(struct query_join* query);
 
 #endif

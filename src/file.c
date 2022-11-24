@@ -116,6 +116,9 @@ enum write_status write_row_to_page(FILE *file, uint32_t page_to_write_num, stru
         if (fwrite(row->row_header, sizeof(struct row_header), 1, file) == 1) { 
             fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B + ph_to_write->free_space_cursor+sizeof(struct row_header), SEEK_SET);
             if (fwrite(row->content, row_len, 1, file) == 1) {
+                //TODO:
+                print_passed_content(row->content, row->table->table_schema->columns, row->table->table_schema->column_count); //TODO:
+
                 ph_to_write->free_bytes -= sizeof(struct row_header) + row_len;
                 ph_to_write->free_space_cursor += sizeof(struct row_header) + row_len;
 
@@ -256,6 +259,7 @@ void select_where(FILE *file, struct table* table, uint32_t offset, uint16_t col
             if (rh->valid) {
                 fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer+sizeof(struct row_header), SEEK_SET); //TODO: check
                 fread(pointer_to_read_row, table->table_schema->row_length, 1, file); //прочитали всю строку и у нас есть указатель на нее
+                //print_passed_content(pointer_to_read_row, table->table_schema->columns, table->table_schema->column_count);
                 switch (type) {
                     case TYPE_INT32:
                         if (compare_int(pointer_to_read_row, column_value, offset)) print_passed_content(pointer_to_read_row, table->table_schema->columns, table->table_schema->column_count);
@@ -335,12 +339,12 @@ void update_where(FILE *file, struct table* table, struct expanded_query* first,
 
 
 void print_int(char* row_start, uint32_t offset) {
-    int32_t* value_to_print = (int32_t*) row_start + offset;
+    int32_t* value_to_print = (int32_t*) (row_start + offset);
     printf("%" PRId32 ";", *value_to_print);
 }
 
 void print_bool(char* row_start, uint32_t offset) {
-    bool* value_to_print = (bool*) row_start + offset;
+    bool* value_to_print = (bool*) (row_start + offset);
     printf("%s;", *value_to_print ? "true" : "false");
 }
 
@@ -350,7 +354,7 @@ void print_string(char* row_start, uint32_t offset) {
 }
 
 void print_float(char* row_start, uint32_t offset) {
-    double* value_to_print = (double*) row_start + offset;
+    double* value_to_print = (double*) (row_start + offset);
     printf("%f;", *value_to_print);
 }
 

@@ -27,10 +27,10 @@ struct query {
 };
 
 struct query_join {
-    struct table* first_table;
-    struct table* second_table;
-    char* first_column_names;
-    char* second_column_names;
+    struct table* left_table;
+    struct table* right_table;
+    char* left_column_name;
+    char* right_column_name;
 };
 
 #endif
