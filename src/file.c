@@ -116,9 +116,6 @@ enum write_status write_row_to_page(FILE *file, uint32_t page_to_write_num, stru
         if (fwrite(row->row_header, sizeof(struct row_header), 1, file) == 1) { 
             fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B + ph_to_write->free_space_cursor+sizeof(struct row_header), SEEK_SET);
             if (fwrite(row->content, row_len, 1, file) == 1) {
-                //TODO:
-                print_passed_content(row->content, row->table->table_schema->columns, row->table->table_schema->column_count); //TODO:
-
                 ph_to_write->free_bytes -= sizeof(struct row_header) + row_len;
                 ph_to_write->free_space_cursor += sizeof(struct row_header) + row_len;
 
@@ -189,14 +186,14 @@ enum read_status read_columns_of_table(FILE *file, struct table* table) {
 }
 
 bool compare_int(char* pointer_to_read_row, void* column_value, uint32_t offset) {
-    int32_t* value_to_compare = (int32_t*) pointer_to_read_row + offset;
+    int32_t* value_to_compare = (int32_t*) (pointer_to_read_row + offset);
     int32_t given_value = *((int32_t*) column_value);
     if (*value_to_compare == given_value) return true;
     return false;
 }
 
 bool compare_bool(char* pointer_to_read_row, void* column_value, uint32_t offset) {
-    bool* value_to_compare = (bool*) pointer_to_read_row + offset;
+    bool* value_to_compare = (bool*) (pointer_to_read_row + offset);
     bool given_value = *((bool*) column_value);
     if (*value_to_compare == given_value) return true;
     return false;
@@ -210,20 +207,20 @@ bool compare_string(char* pointer_to_read_row, void* column_value, uint32_t offs
 }
 
 bool compare_float(char* pointer_to_read_row, void* column_value, uint32_t offset) {
-    double* value_to_compare = (double*) pointer_to_read_row + offset;
+    double* value_to_compare = (double*) (pointer_to_read_row + offset);
     double given_value = *((double*) column_value);
     if (*value_to_compare == given_value) return true;
     return false;
 }
 
 void update_int(char* pointer_to_read_row, void* column_value, uint32_t offset) {
-    int32_t* value_to_change = (int32_t*) pointer_to_read_row + offset;
+    int32_t* value_to_change = (int32_t*) (pointer_to_read_row + offset);
     int32_t given_value = *((int32_t*) column_value);
     *value_to_change = given_value; 
 }
 
 void update_bool(char* pointer_to_read_row, void* column_value, uint32_t offset) {
-    bool* value_to_change = (bool*) pointer_to_read_row + offset;
+    bool* value_to_change = (bool*) (pointer_to_read_row + offset);
     bool given_value = *((bool*) column_value);
     *value_to_change = given_value; 
 }
@@ -235,13 +232,14 @@ void update_string(char* pointer_to_read_row, void* column_value, uint32_t offse
 }
 
 void update_float(char* pointer_to_read_row, void* column_value, uint32_t offset) {
-    double* value_to_change = (double*) pointer_to_read_row + offset;
+    double* value_to_change = (double*) (pointer_to_read_row + offset);
     double given_value = *((double*) column_value);
     *value_to_change = given_value; 
 }
 
 //TODO: table num in tech page и row count поправить
 void select_where(FILE *file, struct table* table, uint32_t offset, uint16_t column_size, void* column_value, enum data_type type, int32_t row_count) {
+    uint32_t selected_count = 0;
     uint32_t current_pointer = sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count;
     struct row_header* rh =  malloc(sizeof(struct row_header));
     char* pointer_to_read_row = malloc(table->table_schema->row_length);
@@ -254,24 +252,35 @@ void select_where(FILE *file, struct table* table, uint32_t offset, uint16_t col
 
         while (current_pointer != ph->free_space_cursor) {
 
-            fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer, SEEK_SET); //TODO: check
+            fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer, SEEK_SET);
             fread(rh, sizeof(struct row_header), 1, file);
             if (rh->valid) {
-                fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer+sizeof(struct row_header), SEEK_SET); //TODO: check
+                fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer+sizeof(struct row_header), SEEK_SET);
                 fread(pointer_to_read_row, table->table_schema->row_length, 1, file); //прочитали всю строку и у нас есть указатель на нее
-                //print_passed_content(pointer_to_read_row, table->table_schema->columns, table->table_schema->column_count);
                 switch (type) {
                     case TYPE_INT32:
-                        if (compare_int(pointer_to_read_row, column_value, offset)) print_passed_content(pointer_to_read_row, table->table_schema->columns, table->table_schema->column_count);
+                        if (compare_int(pointer_to_read_row, column_value, offset)) {
+                            print_passed_content(pointer_to_read_row, table->table_schema->columns, table->table_schema->column_count);
+                            selected_count++;
+                        }
                         break;
                     case TYPE_BOOL:
-                        if (compare_bool(pointer_to_read_row, column_value, offset)) print_passed_content(pointer_to_read_row, table->table_schema->columns, table->table_schema->column_count);
+                        if (compare_bool(pointer_to_read_row, column_value, offset)) {
+                            print_passed_content(pointer_to_read_row, table->table_schema->columns, table->table_schema->column_count);
+                            selected_count++;
+                        }
                         break;
                     case TYPE_STRING:
-                        if (compare_string(pointer_to_read_row, column_value, offset, column_size)) print_passed_content(pointer_to_read_row, table->table_schema->columns, table->table_schema->column_count);
+                        if (compare_string(pointer_to_read_row, column_value, offset, column_size)) {
+                            print_passed_content(pointer_to_read_row, table->table_schema->columns, table->table_schema->column_count);
+                            selected_count++;
+                        } 
                         break;
                     case TYPE_FLOAT:
-                        if (compare_float(pointer_to_read_row, column_value, offset)) print_passed_content(pointer_to_read_row, table->table_schema->columns, table->table_schema->column_count);
+                        if (compare_float(pointer_to_read_row, column_value, offset)) {
+                            print_passed_content(pointer_to_read_row, table->table_schema->columns, table->table_schema->column_count);
+                            selected_count++;
+                        }
                         break;
                 }
             }
@@ -286,9 +295,12 @@ void select_where(FILE *file, struct table* table, uint32_t offset, uint16_t col
             }
     
         }
+    printf("=====================\n");
+    printf("Всего %d строк\n", selected_count);
 }
 
 void update_where(FILE *file, struct table* table, struct expanded_query* first, struct expanded_query* second, void** column_values) {
+    uint32_t updated_count = 0;
     uint32_t current_pointer = sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count;
 
     struct row_header* rh =  malloc(sizeof(struct row_header));
@@ -310,16 +322,28 @@ void update_where(FILE *file, struct table* table, struct expanded_query* first,
                 
                 switch (first->column_type) {
                     case TYPE_INT32:
-                        if (compare_int(pointer_to_read_row, column_values[0], first->offset)) update_content(pointer_to_read_row, column_values[1], second, table, pointer_to_update, ph->page_number_general);
+                        if (compare_int(pointer_to_read_row, column_values[0], first->offset)) {
+                            update_content(pointer_to_read_row, column_values[1], second, table, pointer_to_update, ph->page_number_general);
+                            updated_count++;
+                        }
                         break;
                     case TYPE_BOOL:
-                        if (compare_bool(pointer_to_read_row, column_values[0], first->offset)) update_content(pointer_to_read_row, column_values[1], second, table, pointer_to_update, ph->page_number_general);
+                        if (compare_bool(pointer_to_read_row, column_values[0], first->offset)) {
+                            update_content(pointer_to_read_row, column_values[1], second, table, pointer_to_update, ph->page_number_general);
+                            updated_count++;
+                        }
                         break;
                     case TYPE_STRING:
-                        if (compare_string(pointer_to_read_row, column_values[0], first->offset, first->column_size)) update_content(pointer_to_read_row, column_values[1], second, table, pointer_to_update, ph->page_number_general);
+                        if (compare_string(pointer_to_read_row, column_values[0], first->offset, first->column_size)) {
+                            update_content(pointer_to_read_row, column_values[1], second, table, pointer_to_update, ph->page_number_general);
+                            updated_count++;
+                        }
                         break;
                     case TYPE_FLOAT:
-                        if (compare_float(pointer_to_read_row, column_values[0], first->offset)) update_content(pointer_to_read_row, column_values[1], second, table, pointer_to_update, ph->page_number_general);
+                        if (compare_float(pointer_to_read_row, column_values[0], first->offset)) {
+                            update_content(pointer_to_read_row, column_values[1], second, table, pointer_to_update, ph->page_number_general);
+                            updated_count++;
+                        }
                         break;
                 }
                 current_pointer += sizeof(struct row_header)+table->table_schema->row_length;
@@ -335,6 +359,8 @@ void update_where(FILE *file, struct table* table, struct expanded_query* first,
             }
     
         }
+    printf("=====================\n");
+    printf("Всего %d строк\n", updated_count);
 }
 
 
@@ -511,4 +537,180 @@ void delete_row(char* row_start, struct table* table, uint32_t pointer_to_delete
 
     fseek(table->table_header->db->database_file, (page_general_number-1)*DEFAULT_PAGE_SIZE_B + pointer_to_delete, SEEK_SET);
     fwrite(&rh, sizeof(struct row_header), 1, table->table_header->db->database_file);
+}
+
+void print_joined_content(char* row_start_left, char* row_start_right, struct table* left_table, struct table* right_table, uint32_t left_offset, uint32_t right_offset) {
+    uint16_t offset = 0;
+    uint16_t second_offset = 0;
+    for (size_t i=0; i<left_table->table_schema->column_count; i++) {
+        if (offset != left_offset) {
+            switch (left_table->table_schema->columns[i].column_type) {
+            case TYPE_INT32:
+                print_int(row_start_left, offset);
+                break;
+            case TYPE_BOOL:
+                print_bool(row_start_left, offset);
+                break;
+            case TYPE_STRING:
+                print_string(row_start_left, offset);
+                break; 
+            case TYPE_FLOAT:
+                print_float(row_start_left, offset);
+                break; 
+            }
+        } else {
+            for (size_t j=0; j<right_table->table_schema->column_count; j++) {
+                if (second_offset != right_offset) {
+                    switch (right_table->table_schema->columns[j].column_type) {
+                        case TYPE_INT32:
+                            print_int(row_start_right, second_offset);
+                            break;
+                        case TYPE_BOOL:
+                            print_bool(row_start_right, second_offset);
+                            break;
+                        case TYPE_STRING:
+                            print_string(row_start_right, second_offset);
+                            break; 
+                        case TYPE_FLOAT:
+                            print_float(row_start_right, second_offset);
+                            break; 
+                    }
+                }
+                second_offset += right_table->table_schema->columns[j].size;
+            }
+        }
+        offset += left_table->table_schema->columns[i].size;
+    }
+    printf("\n");
+}
+
+bool join_compare_int(char* row_from_left_table, char* row_from_right_table, struct expanded_query* left_expanded, struct expanded_query* right_expanded, struct table* left_table, struct table* right_table) {
+    int32_t* left_value = (int32_t*) (row_from_left_table + left_expanded->offset);
+    int32_t* right_value = (int32_t*) (row_from_right_table + right_expanded->offset);
+    if (*left_value == *right_value) {
+        print_joined_content(row_from_left_table, row_from_right_table, left_table, right_table, left_expanded->offset, right_expanded->offset);
+        return true;
+    } else return false;
+}
+
+bool join_compare_bool(char* row_from_left_table, char* row_from_right_table, struct expanded_query* left_expanded, struct expanded_query* right_expanded, struct table* left_table, struct table* right_table) {
+    bool* left_value = (bool*) (row_from_left_table + left_expanded->offset);
+    bool* right_value = (bool*) (row_from_right_table + right_expanded->offset);
+    if (*left_value == *right_value) {
+        print_joined_content(row_from_left_table, row_from_right_table, left_table, right_table, left_expanded->offset, right_expanded->offset);
+        return true;
+    } else return false;
+}
+
+bool join_compare_string(char* row_from_left_table, char* row_from_right_table, struct expanded_query* left_expanded, struct expanded_query* right_expanded, struct table* left_table, struct table* right_table) {
+    char* left_value = (char*) (row_from_left_table + left_expanded->offset);
+    char* right_value = (char*) (row_from_right_table + right_expanded->offset);
+    if (strcmp(left_value, right_value) == 0) {
+        print_joined_content(row_from_left_table, row_from_right_table, left_table, right_table, left_expanded->offset, right_expanded->offset);
+        return true;
+    } else return false;
+}
+
+bool join_compare_float(char* row_from_left_table, char* row_from_right_table, struct expanded_query* left_expanded, struct expanded_query* right_expanded, struct table* left_table, struct table* right_table) {
+    double* left_value = (double*) (row_from_left_table + left_expanded->offset);
+    double* right_value = (double*) (row_from_right_table + right_expanded->offset);
+    if (*left_value == *right_value) {
+        print_joined_content(row_from_left_table, row_from_right_table, left_table, right_table, left_expanded->offset, right_expanded->offset);
+        return true;
+    } else return false;
+}
+
+uint32_t try_connect_with_right_table(FILE *file, struct table* left_table, struct table* right_table, struct expanded_query* left_expanded, struct expanded_query* right_expanded, char* row_from_left_table) {
+    uint32_t current_pointer = sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*right_table->table_schema->column_count;
+    struct row_header* rh =  malloc(sizeof(struct row_header));
+    char* pointer_to_read_row = malloc(right_table->table_schema->row_length);
+
+    struct page_header* ph = malloc(sizeof(struct page_header));
+    fseek(file, (right_table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
+    fread(ph, sizeof(struct page_header), 1, file); //прочитали заголовок страницы
+
+    fseek(file, (right_table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*right_table->table_schema->column_count, SEEK_SET); //передвинулись на начало строк
+
+        while (current_pointer != ph->free_space_cursor) {
+
+            fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer, SEEK_SET);
+            fread(rh, sizeof(struct row_header), 1, file);
+            if (rh->valid) {
+                fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer+sizeof(struct row_header), SEEK_SET);
+                fread(pointer_to_read_row, right_table->table_schema->row_length, 1, file); //прочитали всю строку и у нас есть указатель на нее
+                switch (right_expanded->column_type) {
+                    case TYPE_INT32:
+                        if (join_compare_int(row_from_left_table, pointer_to_read_row, left_expanded, right_expanded, left_table, right_table)) {
+                            return 1;
+                        }
+                        break;
+                    case TYPE_BOOL:
+                        if (join_compare_bool(row_from_left_table, pointer_to_read_row, left_expanded, right_expanded, left_table, right_table)) {
+                            return 1;
+                        }
+                        break;
+                    case TYPE_STRING:
+                        if (join_compare_string(row_from_left_table, pointer_to_read_row, left_expanded, right_expanded, left_table, right_table)) {
+                            return 1;
+                        } 
+                        break;
+                    case TYPE_FLOAT:
+                        if (join_compare_float(row_from_left_table, pointer_to_read_row, left_expanded, right_expanded, left_table, right_table)) {
+                            return 1;
+                        }
+                        break;
+                }
+            }
+
+            current_pointer += sizeof(struct row_header)+right_table->table_schema->row_length;
+
+            if (ph->next_page_number_general != 0 && current_pointer == ph->free_space_cursor) {
+                current_pointer = sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*right_table->table_schema->column_count;
+                fseek(file, (ph->next_page_number_general-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
+                fread(ph, sizeof(struct page_header), 1, file);
+                fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*right_table->table_schema->column_count, SEEK_SET);
+            }
+    
+        }
+}
+
+
+void join(FILE *file, struct table* left_table, struct table* right_table, struct expanded_query* left_expanded, struct expanded_query* right_expanded) {
+    uint32_t joined_count = 0;
+    uint32_t current_pointer = sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*left_table->table_schema->column_count;
+    struct row_header* rh =  malloc(sizeof(struct row_header));
+    char* pointer_to_read_row = malloc(left_table->table_schema->row_length);
+
+    struct page_header* ph = malloc(sizeof(struct page_header));
+    fseek(file, (left_table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
+    fread(ph, sizeof(struct page_header), 1, file); //прочитали заголовок страницы
+
+    fseek(file, (left_table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*left_table->table_schema->column_count, SEEK_SET); //передвинулись на начало строк
+
+        while (current_pointer != ph->free_space_cursor) {
+
+            fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer, SEEK_SET);
+            fread(rh, sizeof(struct row_header), 1, file);
+            if (rh->valid) {
+                fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer+sizeof(struct row_header), SEEK_SET);
+                fread(pointer_to_read_row, left_table->table_schema->row_length, 1, file); //прочитали всю строку и у нас есть указатель на нее
+                //передаем строку в метод
+                //там достаем вторую строку которая подходит
+                //выводим
+                joined_count += try_connect_with_right_table(file, left_table, right_table, left_expanded, right_expanded, pointer_to_read_row);        
+            }
+
+            current_pointer += sizeof(struct row_header)+left_table->table_schema->row_length;
+
+            if (ph->next_page_number_general != 0 && current_pointer == ph->free_space_cursor) {
+                current_pointer = sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*left_table->table_schema->column_count;
+                fseek(file, (ph->next_page_number_general-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
+                fread(ph, sizeof(struct page_header), 1, file);
+                fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*left_table->table_schema->column_count, SEEK_SET);
+            }
+    
+        }
+    printf("=====================\n");
+    printf("Всего %d строк\n", joined_count);
+
 }

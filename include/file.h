@@ -80,4 +80,13 @@ enum write_status overwrite_previous_last_page(FILE *file, uint32_t previous_las
 void delete_row(char* row_start, struct table* table, uint32_t pointer_to_delete, uint32_t page_general_number);
 void delete_where(FILE *file, struct table* table, struct expanded_query* expanded, void* column_value);
 
+void print_joined_content(char* row_start_left, char* row_start_right, struct table* left_table, struct table* right_table, uint32_t left_offset, uint32_t right_offset);
+bool join_compare_int(char* row_from_left_table, char* row_from_right_table, struct expanded_query* left_expanded, struct expanded_query* right_expanded, struct table* left_table, struct table* right_table);
+bool join_compare_bool(char* row_from_left_table, char* row_from_right_table, struct expanded_query* left_expanded, struct expanded_query* right_expanded, struct table* left_table, struct table* right_table);
+bool join_compare_string(char* row_from_left_table, char* row_from_right_table, struct expanded_query* left_expanded, struct expanded_query* right_expanded, struct table* left_table, struct table* right_table);
+bool join_compare_float(char* row_from_left_table, char* row_from_right_table, struct expanded_query* left_expanded, struct expanded_query* right_expanded, struct table* left_table, struct table* right_table);
+uint32_t try_connect_with_right_table(FILE *file, struct table* left_table, struct table* right_table, struct expanded_query* left_expanded, struct expanded_query* right_expanded, char* row_from_left_table);
+void join(FILE *file, struct table* left_table, struct table* right_table, struct expanded_query* left_expanded, struct expanded_query* right_expanded);
+
+
 #endif

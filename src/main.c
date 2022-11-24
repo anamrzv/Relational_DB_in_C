@@ -127,6 +127,8 @@ void read_db() {
     } 
 
     char* changed_name = "Nastya";
+    eye_color = 5;
+    fill_row_attribute(row1, "eye_color", TYPE_INT32, (void*) &eye_color);
     fill_row_attribute(row1, "name", TYPE_STRING, (void*) &changed_name);
     for (size_t i=0; i<50; i++){
         id += 1;
@@ -150,7 +152,7 @@ void read_db() {
     struct query* select_query_2 = create_query(SELECT_WHERE, my_first_table, column2, value2, -1);
     run_query(select_query_2);
 
-    printf("Query 3: SELECT * FROM table1 WHERE male = true\n");
+    printf("Query 3: SELECT * FROM table1 WHERE male = false\n");
     char* column3[1] = {"male"};
     void* value3[1] = {&my_sex};
     struct query* select_query_3 = create_query(SELECT_WHERE, my_first_table, column3, value3, -1);
@@ -169,13 +171,13 @@ void read_db() {
     struct query* select_query_5 = create_query(UPDATE_WHERE, my_first_table, columns2, values2, -1);
     run_query(select_query_5);
 
-    printf("Query 6: DELETE FROM table1 WHERE name = Dasha \n");
-    struct query* select_query_6 = create_query(DELETE_WHERE, my_first_table, column2, value2, -1);
-    run_query(select_query_6);
-
     printf("Query 7: SELECT * FROM people JOIN colors ON people.eye_color = colors.id \n");
     struct query_join* select_query_7 = create_query_join(my_first_table, my_second_table, "eye_color", "id");
     run_join_query(select_query_7);
+
+    printf("Query 6: DELETE FROM table1 WHERE name = Dasha \n");
+    struct query* select_query_6 = create_query(DELETE_WHERE, my_first_table, column2, value2, -1);
+    run_query(select_query_6);
 
     printf("Конец:)");
 

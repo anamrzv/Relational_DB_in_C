@@ -238,5 +238,53 @@ void run_query(struct query* query) {
 }
 
 void run_join_query(struct query_join* query) {
-    //TODO:
+    bool first_column_exists = false;
+    bool second_column_exists = false;
+    enum data_type first_column_type;
+    enum data_type second_column_type;
+    char first_column_name[MAX_COLUMN_NAME_LEN];
+    char second_column_name[MAX_COLUMN_NAME_LEN];
+    uint16_t first_column_size = 0;
+    uint16_t second_column_size = 0;
+
+    for (size_t i=0; i<query->left_table->table_schema->column_count; i++) {
+        if (strcmp(query->left_table->table_schema->columns[i].name, query->left_column_name) == 0) {
+            first_column_exists = true;
+            first_column_type = query->left_table->table_schema->columns[i].column_type;
+            strncpy(first_column_name, query->left_table->table_schema->columns[i].name, MAX_COLUMN_NAME_LEN);
+            first_column_size = query->left_table->table_schema->columns[i].size;
+        }
+        if (first_column_exists) break;
+    }
+
+    for (size_t i=0; i<query->right_table->table_schema->column_count; i++) {
+        if (strcmp(query->right_table->table_schema->columns[i].name, query->right_column_name) == 0) {
+            second_column_exists = true;
+            second_column_type = query->right_table->table_schema->columns[i].column_type;
+            strncpy(second_column_name, query->right_table->table_schema->columns[i].name, MAX_COLUMN_NAME_LEN);
+            second_column_size = query->right_table->table_schema->columns[i].size;
+        }
+        if (second_column_exists) break;
+    }
+
+    if (first_column_exists && second_column_exists) {
+        uint32_t first_offset = column_offset(query->left_table->table_schema->columns, query->left_table->table_schema->column_count, first_column_name);
+        uint32_t second_offset = column_offset(query->right_table->table_schema->columns, query->right_table->table_schema->column_count, second_column_name);
+        struct expanded_query* first_expanded = malloc(sizeof(struct expanded_query));
+        struct expanded_query* second_expanded = malloc(sizeof(struct expanded_query));
+
+        first_expanded->column_type = first_column_type;
+        first_expanded->column_size = first_column_size;
+        first_expanded->offset = first_offset;
+        strncpy(first_expanded->column_name, "", MAX_COLUMN_NAME_LEN);
+        strncpy(first_expanded->column_name, first_column_name, MAX_COLUMN_NAME_LEN);
+
+        second_expanded->column_type = second_column_type;
+        second_expanded->column_size = second_column_size;
+        second_expanded->offset = second_offset;
+        strncpy(second_expanded->column_name, "", MAX_COLUMN_NAME_LEN);
+        strncpy(second_expanded->column_name, second_column_name, MAX_COLUMN_NAME_LEN);
+
+        join(query->left_table->table_header->db->database_file, query->left_table, query->right_table, first_expanded, second_expanded);
+    } else printf("Невозможно выполнить запрос по вашему условию: колонки_ок из запроса нет в таблице\n");
 }
