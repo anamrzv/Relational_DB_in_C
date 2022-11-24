@@ -221,7 +221,7 @@ void run_query(struct query* query) {
                 update_row_in_table(query);
                 break;
             case DELETE_WHERE:
-                //delete_row_from_table(query);
+                delete_row_from_table(query);
                 break;            
     }
 }

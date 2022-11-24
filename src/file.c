@@ -129,30 +129,6 @@ enum write_status write_row_to_page(FILE *file, uint32_t page_to_write_num, stru
     
 }
 
-
-// enum write_status overwrite_row(FILE *file, uint32_t page_to_write_num, struct row* row) {
-//     uint32_t row_len = row->table->table_header->schema.row_length;
-//     fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
-//     struct page_header* ph_to_write = malloc(sizeof(struct page_header));
-//     if (fread(ph_to_write, sizeof(struct page_header), 1, file) == 1) {
-//         fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B + ph_to_write->free_space_cursor, SEEK_SET);
-//         if (fwrite(row->row_header, sizeof(struct row_header), 1, file) == 1) { 
-//             fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B + ph_to_write->free_space_cursor+sizeof(struct row_header), SEEK_SET);
-//             if (fwrite(row->content, row_len, 1, file) == 1) {
-//                 ph_to_write->free_bytes -= sizeof(struct row_header) + row_len;
-//                 ph_to_write->free_space_cursor += sizeof(struct row_header) + row_len;
-
-//                 fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
-//                 if (fwrite(ph_to_write, sizeof(struct page_header), 1, file) != 1) return WRITE_ERROR;
-//                 return WRITE_OK;
-//             }
-//         }
-//         return WRITE_ERROR;
-//     } else return WRITE_ERROR;
-    
-// }
-
-
 enum read_status read_database_header(FILE *file, struct database_header* db_header) {
    fseek(file, 0, SEEK_SET);
    if (fread(db_header, sizeof(struct database_header), 1, file) == 1) return READ_OK;
@@ -461,4 +437,74 @@ enum write_status overwrite_previous_last_page(FILE *file, uint32_t previous_las
         free(old);
         return WRITE_ERROR;
     }
+}
+
+void delete_where(FILE *file, struct table* table, struct expanded_query* expanded, void* column_value) {
+    uint32_t current_pointer = sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count;
+    uint32_t count_of_deleted = 0;
+
+    struct row_header* rh =  malloc(sizeof(struct row_header));
+    char* pointer_to_read_row = malloc(table->table_schema->row_length);
+    struct page_header* ph = malloc(sizeof(struct page_header));
+
+    fseek(file, (table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
+    fread(ph, sizeof(struct page_header), 1, file); //прочитали заголовок страницы
+
+    fseek(file, (table->table_header->first_page_general_number-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count, SEEK_SET); //передвинулись на начало строк
+
+    while (current_pointer != ph->free_space_cursor) {
+
+        fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer, SEEK_SET);
+        fread(rh, sizeof(struct row_header), 1, file);
+        if (rh->valid) {
+            fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+current_pointer+sizeof(struct row_header), SEEK_SET);
+            fread(pointer_to_read_row, table->table_schema->row_length, 1, file); //прочитали всю строку и у нас есть указатель на нее
+            
+            switch (expanded->column_type) {
+                case TYPE_INT32:
+                    if (compare_int(pointer_to_read_row, column_value, expanded->offset)) {
+                        delete_row(pointer_to_read_row, table, current_pointer, ph->page_number_general);
+                        count_of_deleted += 1;
+                    }
+                    break;
+                case TYPE_BOOL:
+                    if (compare_bool(pointer_to_read_row, column_value, expanded->offset)) {
+                        delete_row(pointer_to_read_row, table, current_pointer, ph->page_number_general);
+                        count_of_deleted += 1;
+                    }
+                    break;
+                case TYPE_STRING:
+                    if (compare_string(pointer_to_read_row, column_value, expanded->offset, expanded->column_size)) {
+                        delete_row(pointer_to_read_row, table, current_pointer, ph->page_number_general);
+                        count_of_deleted += 1;
+                    }
+                    break;
+                case TYPE_FLOAT:
+                    if (compare_float(pointer_to_read_row, column_value, expanded->offset)) {
+                        delete_row(pointer_to_read_row, table, current_pointer, ph->page_number_general);
+                        count_of_deleted += 1;
+                    }
+                    break;
+            }
+        }
+                
+        current_pointer += sizeof(struct row_header)+table->table_schema->row_length;
+
+        if (ph->next_page_number_general != 0 && current_pointer == ph->free_space_cursor) {
+            current_pointer = sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count;
+            fseek(file, (ph->next_page_number_general-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
+            fread(ph, sizeof(struct page_header), 1, file);
+            fseek(file, (ph->page_number_general-1)*DEFAULT_PAGE_SIZE_B+sizeof(struct page_header)+sizeof(uint16_t)+sizeof(struct column)*table->table_schema->column_count, SEEK_SET);
+        }
+    
+    }
+
+    printf("Было удалено %d строк\n", count_of_deleted);
+}
+
+void delete_row(char* row_start, struct table* table, uint32_t pointer_to_delete, uint32_t page_general_number) {
+    struct row_header rh =  { false };
+
+    fseek(table->table_header->db->database_file, (page_general_number-1)*DEFAULT_PAGE_SIZE_B + pointer_to_delete, SEEK_SET);
+    fwrite(&rh, sizeof(struct row_header), 1, table->table_header->db->database_file);
 }

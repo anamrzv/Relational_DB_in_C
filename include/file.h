@@ -77,5 +77,7 @@ void update_content(char* row_start, void* column_value, struct expanded_query* 
 enum write_status overwrite_previous_last_page_db(FILE *file, struct database_header* db_header, uint32_t new_next_number);
 enum write_status overwrite_previous_last_page(FILE *file, uint32_t previous_last_page_number, uint32_t new_next_number);
 
+void delete_row(char* row_start, struct table* table, uint32_t pointer_to_delete, uint32_t page_general_number);
+void delete_where(FILE *file, struct table* table, struct expanded_query* expanded, void* column_value);
 
 #endif

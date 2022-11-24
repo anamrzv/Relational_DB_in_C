@@ -147,24 +147,33 @@ void update_row_in_table(struct query* query) {
     } else printf("Невозможно выполнить запрос по вашему условию: колонки_ок из запроса нет в таблице\n");
 }
 
-// void delete_row_from_table(struct query* query) {
-//     bool column_exists = false;
-//     enum data_type column_type;
-//     char column_name[MAX_COLUMN_NAME_LEN];
-//     uint16_t column_size = 0;
+void delete_row_from_table(struct query* query) {
+    bool column_exists = false;
+    enum data_type column_type;
+    char column_name[MAX_COLUMN_NAME_LEN];
+    uint16_t column_size = 0;
     
-//     for (size_t i=0; i<query->table->table_schema->column_count; i++) {
-//         if (strcmp(query->table->table_schema->columns[i].name, query->column_name[0]) == 0) {
-//             column_exists = true;
-//             column_type = query->table->table_schema->columns[i].column_type;
-//             strncpy(column_name, query->table->table_schema->columns[i].name, MAX_COLUMN_NAME_LEN);
-//             column_size = query->table->table_schema->columns[i].size;
-//             break;
-//         };
-//     }
-//     if (column_exists) {
-//         uint32_t offset = column_offset(query->table->table_schema->columns, query->table->table_schema->column_count, column_name);
-//         delete_where(query->table->table_header->db->database_file, query->table, offset, column_size, query->column_value, column_type, query->rows_number);
-//     } else printf("Невозможно выполнить запрос по вашему условию: колонки из запроса нет в таблице\n");
-// }
+    for (size_t i=0; i<query->table->table_schema->column_count; i++) {
+        if (strcmp(query->table->table_schema->columns[i].name, query->column_name[0]) == 0) {
+            column_exists = true;
+            column_type = query->table->table_schema->columns[i].column_type;
+            strncpy(column_name, query->table->table_schema->columns[i].name, MAX_COLUMN_NAME_LEN);
+            column_size = query->table->table_schema->columns[i].size;
+            break;
+        };
+    }
+    
+    if (column_exists) {
+        uint32_t offset = column_offset(query->table->table_schema->columns, query->table->table_schema->column_count, column_name);
+        struct expanded_query* expanded = malloc(sizeof(struct expanded_query));
+
+        expanded->column_type = column_type;
+        expanded->column_size = column_size;
+        expanded->offset = offset;
+        strncpy(expanded->column_name, "", MAX_COLUMN_NAME_LEN);
+        strncpy(expanded->column_name, column_name, MAX_COLUMN_NAME_LEN);
+
+        delete_where(query->table->table_header->db->database_file, query->table, expanded, query->column_value[0]);
+    } else printf("Невозможно выполнить запрос по вашему условию: колонки из запроса нет в таблице\n");
+}
 

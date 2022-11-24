@@ -25,13 +25,13 @@ void write_db() {
     fill_row_attribute(row1, "age", TYPE_INT32, (void*) &my_age);
     fill_row_attribute(row1, "name", TYPE_STRING, (void*) &my_name);
     fill_row_attribute(row1, "male", TYPE_BOOL, (void*) &my_sex);
-    for (size_t i=0; i<100; i++){
+    for (size_t i=0; i<100; i++) { //100 даш
         insert_row_to_table(row1);
     } 
 
     char* changed_name = "Nastya";
     fill_row_attribute(row1, "name", TYPE_STRING, (void*) &changed_name);
-    for (size_t i=0; i<100; i++){
+    for (size_t i=0; i<100; i++){ //100 насть
         insert_row_to_table(row1);
     }
 
@@ -56,7 +56,7 @@ void read_db() {
     fill_row_attribute(row1, "age", TYPE_INT32, (void*) &my_age);
     fill_row_attribute(row1, "name", TYPE_STRING, (void*) &my_name);
     fill_row_attribute(row1, "male", TYPE_BOOL, (void*) &my_sex);
-    insert_row_to_table(row1);
+    insert_row_to_table(row1); // 1 dima
 
     struct row* row2 = create_row(my_first_table);
     my_age = 10;
@@ -65,12 +65,12 @@ void read_db() {
     fill_row_attribute(row2, "age", TYPE_INT32, (void*) &my_age);
     fill_row_attribute(row2, "name", TYPE_STRING, (void*) &my_name);
     fill_row_attribute(row2, "male", TYPE_BOOL, (void*) &my_sex);
-    insert_row_to_table(row2);
+    insert_row_to_table(row2); //1 nastya
 
     char* changed_name = "Nastya";
     fill_row_attribute(row1, "name", TYPE_STRING, (void*) &changed_name);
     for (size_t i=0; i<50; i++){
-        insert_row_to_table(row1);
+        insert_row_to_table(row1); //50 насть
     }
     
     // printf("Query 1\n");
@@ -83,19 +83,19 @@ void read_db() {
     my_name = "Nastya";
     uint32_t new_age = 101;
 
-    printf("Query 1\n");
+    printf("Query 1: SELECT * FROM table1 WHERE age = 20\n");
     char* column[1] = {"age"};
     void* value[1] = { &my_age };
     struct query* select_query = create_query(SELECT_WHERE, my_first_table, column, value, -1);
     run_query(select_query);
 
-    printf("Query 2\n");
+    printf("Query 2: SELECT * FROM table1 WHERE name = Nastya\n");
     char* column2[1] = {"name"};
     void* value2[1] = {&my_name};
     struct query* select_query_2 = create_query(SELECT_WHERE, my_first_table, column2, value2, -1);
     run_query(select_query_2);
 
-    printf("Query 3\n");
+    printf("Query 3: SELECT * FROM table1 WHERE male = true\n");
     char* column3[1] = {"male"};
     void* value3[1] = {&my_sex};
     struct query* select_query_3 = create_query(SELECT_WHERE, my_first_table, column3, value3, -1);
@@ -107,12 +107,16 @@ void read_db() {
     struct query* select_query_4 = create_query(UPDATE_WHERE, my_first_table, columns, values, -1);
     run_query(select_query_4);
 
-    printf("Query 5\n");
+    printf("Query 5: UPDATE table1 SET age = 101 WHERE name = Dasha \n");
     my_name = "Dasha";
     char* columns2[2] = {"name", "age"};
     void* values2[2] = {&my_name, &new_age};
     struct query* select_query_5 = create_query(UPDATE_WHERE, my_first_table, columns2, values2, -1);
     run_query(select_query_5);
+
+    printf("Query 6: DELETE FROM table1 WHERE name = Dasha \n");
+    struct query* select_query_6 = create_query(DELETE_WHERE, my_first_table, column2, value2, -1);
+    run_query(select_query_6);
 
     printf("Конец:)");
 
