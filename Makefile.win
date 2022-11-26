@@ -1,0 +1,27 @@
+all: main
+
+main: main.obj table_schema.obj table_content.obj file.obj db.obj
+	cl main.obj table_schema.obj table_content.obj file.obj db.obj -o main.exe
+
+main.obj:
+	cl -c src/main.c
+
+table_schema.obj: 
+	cl -c src/table_schema.c
+
+table_content.obj:
+	cl -c src/table_content.c
+
+file.obj:
+	cl -c src/file.c
+
+db.obj:
+	cl -c src/db.c
+
+exec:
+	./main
+
+clean:
+	del *.obj \
+	del main.exe
+	

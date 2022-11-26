@@ -97,7 +97,7 @@ enum write_status write_table_page(FILE *file, struct page_header* page_to_write
 }
 
 enum write_status write_row_to_page(FILE *file, uint32_t page_to_write_num, struct row* row) {
-    struct page_header* new_page_header - NULL;
+    struct page_header* new_page_header = NULL;
     uint32_t row_len = row->table->table_header->schema.row_length;
     uint32_t sum_volume = sizeof(struct row_header) + row_len;
     fseek(file, (page_to_write_num-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
