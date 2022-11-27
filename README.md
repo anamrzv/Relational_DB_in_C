@@ -362,6 +362,7 @@ int32_t column_offset(const struct column* column_list, const size_t len, char* 
 Операции обновления и удаления элемента данных выполняются не более чем за O(n*m) > t -> O(n+m), где n – количество представленных элементов данных обрабатываемого вида, m – количество фактически затронутых элементов данных
 
 ![image](https://user-images.githubusercontent.com/79102850/204132177-651c3b3c-052a-411d-8a94-9ca4d6022524.png)
+
 ![image](https://user-images.githubusercontent.com/79102850/204132185-6e87e3e9-fb41-4ec7-b87b-208257bf197c.png)
 
 Запуск на Windows и *NIX
