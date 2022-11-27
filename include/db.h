@@ -69,4 +69,7 @@ struct query_join* create_query_join(struct table* left_table, struct table* rig
 void run_query(struct query* query);
 void run_join_query(struct query_join* query);
 
+void close_query(struct query* query);
+void close_join_query(struct query_join* query);
+
 #endif

@@ -83,11 +83,13 @@ struct column* delete_column_from_list(struct column* cur, const char* column_na
 struct column* create_column(const char* column_name, enum data_type column_type);
 struct column* create_string_column(const char* column_name, enum data_type column_type, uint16_t size);
 struct table_schema* create_table_schema();
+void close_schema(struct table_schema* schema);
 struct table_schema* add_column_to_schema(struct table_schema* schema, const char* column_name, enum data_type column_type);
 struct table_schema* add_string_column_to_schema(struct table_schema* schema, const char* column_name, enum data_type column_type, uint16_t size);
 struct table_schema* delete_column_from_schema(struct table_schema* schema, const char* column_name);
 
 struct row* create_row(struct table* table);
+void close_row(struct row* row);
 void fill_with_int(struct row* row, int32_t value, uint32_t offset);
 void fill_with_bool(struct row* row, bool value, uint32_t offset);
 void fill_with_string(struct row* row, char* value, uint32_t offset, uint32_t string_len);

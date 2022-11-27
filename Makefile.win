@@ -19,7 +19,7 @@ db.obj:
 	cl -c src/db.c
 
 exec:
-	./main
+	start main.exe
 
 clean:
 	del *.obj \

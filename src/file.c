@@ -73,7 +73,6 @@ enum write_status overwrite_dh_after_change(FILE *file, struct database_header* 
 enum write_status write_table_page(FILE *file, struct page_header* page_to_write, struct table_schema* schema) {
     fseek(file, (page_to_write->page_number_general-1)*DEFAULT_PAGE_SIZE_B, SEEK_SET);
     uint16_t size_of_column_array = schema->column_count*sizeof(struct column);
-
     page_to_write->free_bytes -= sizeof(struct page_header)+sizeof(uint16_t)+size_of_column_array;
     page_to_write->free_space_cursor += sizeof(struct page_header)+sizeof(uint16_t)+size_of_column_array;
     if (fwrite(page_to_write, sizeof(struct page_header), 1, file) != 1) return WRITE_ERROR;
@@ -752,4 +751,10 @@ void join(FILE *file, struct table* left_table, struct table* right_table, struc
     printf("=====================\n");
     printf("Всего %d строк\n", joined_count);
 
+}
+
+long int getDBSize(FILE* file) {
+
+    fseek(file, 0, SEEK_END);
+    return ftell(file);
 }

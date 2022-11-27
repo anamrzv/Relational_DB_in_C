@@ -87,6 +87,6 @@ bool join_compare_string(char* row_from_left_table, char* row_from_right_table, 
 bool join_compare_float(char* row_from_left_table, char* row_from_right_table, struct expanded_query* left_expanded, struct expanded_query* right_expanded, struct table* left_table, struct table* right_table);
 uint32_t try_connect_with_right_table(FILE *file, struct table* left_table, struct table* right_table, struct expanded_query* left_expanded, struct expanded_query* right_expanded, char* row_from_left_table);
 void join(FILE *file, struct table* left_table, struct table* right_table, struct expanded_query* left_expanded, struct expanded_query* right_expanded);
-
+long int getDBSize(FILE* file);
 
 #endif

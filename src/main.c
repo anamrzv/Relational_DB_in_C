@@ -2,6 +2,7 @@
 #include "../include/table.h"
 #include "../include/query.h"
 #include "../include/db.h"
+#include <time.h>
 
 void write_db() { 
     printf("Test");
@@ -31,7 +32,6 @@ void write_db() {
 
     uint32_t id = 1;
 
-    
     fill_row_attribute(row1, "name", TYPE_STRING, (void*) &my_name);
     fill_row_attribute(row1, "age", TYPE_INT32, (void*) &my_age);
     fill_row_attribute(row1, "male", TYPE_BOOL, (void*) &my_sex);
@@ -84,10 +84,10 @@ void write_db() {
     insert_row_to_table(colors_row);
 
     close_database(my_db);
-
-    free(first_schema);
-    free(my_db->database_header);
-    free(my_db);
+    close_row(colors_row);
+    close_row(row1);
+    close_schema(first_schema);
+    close_schema(second_schema);
 }
 
 void read_db() {
@@ -181,11 +181,233 @@ void read_db() {
 
     printf("Конец:)");
 
+    close_database(my_db);
+    close_row(row1);
+    close_row(row2);
+    close_query(select_query);
+    close_query(select_query_2);
+    close_query(select_query_3);
+    close_query(select_query_4);
+    close_query(select_query_5);
+    close_query(select_query_6);
+    close_join_query(select_query_7);
+}
+
+void test_insert() {
+    printf("TEST INSERT");
+    double time_spent = 0.0;
+
+    struct database* my_db = get_prepared_database("db.bin", TO_BE_CREATED);
+
+    struct table_schema* first_schema = create_table_schema();
+    first_schema = add_string_column_to_schema(first_schema, "name", TYPE_STRING, 20);
+    first_schema = add_column_to_schema(first_schema, "age", TYPE_INT32);
+    first_schema = add_column_to_schema(first_schema, "male", TYPE_BOOL);
+    first_schema = add_column_to_schema(first_schema, "eye_color", TYPE_INT32);
+
+    struct table* table1 = create_table_from_schema(first_schema, "people", my_db);
+
+    struct row* row1 = create_row(table1);
+
+    uint32_t my_age = 20;
+    char* my_name = "Dasha";
+    bool my_sex = false;
+    uint32_t my_eye_color = 1;
+
+    fill_row_attribute(row1, "name", TYPE_STRING, (void*) &my_name);
+    fill_row_attribute(row1, "age", TYPE_INT32, (void*) &my_age);
+    fill_row_attribute(row1, "male", TYPE_BOOL, (void*) &my_sex);
+    fill_row_attribute(row1, "eye_color", TYPE_INT32, (void*) &my_eye_color);
+
+    clock_t begin;
+    clock_t end;
+
+    for (size_t j=1; j<2; j++) {
+        begin = clock();
+        for (size_t i=0; i<1000*j; i++) { 
+            insert_row_to_table(row1);
+        }
+        end = clock();
+        time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+        long int file_size = getDBSize(my_db->database_file);
+        printf("Вставка %d строк заняла %f секунд\n", 1000*j, time_spent);
+        printf("Размер файла %d байт\n", file_size);
+    }
+
+    close_database(my_db);
+    close_row(row1);
+    close_schema(first_schema);
+}
+
+void test_select() {
+    printf("TEST SELECT");
+
+    struct database* my_db = get_prepared_database("db_select.bin", TO_BE_CREATED);
+
+    struct table_schema* first_schema = create_table_schema();
+    first_schema = add_string_column_to_schema(first_schema, "name", TYPE_STRING, 20);
+    first_schema = add_column_to_schema(first_schema, "age", TYPE_INT32);
+    first_schema = add_column_to_schema(first_schema, "male", TYPE_BOOL);
+    first_schema = add_column_to_schema(first_schema, "eye_color", TYPE_INT32);
+
+    struct table* table1 = create_table_from_schema(first_schema, "people", my_db);
+
+    struct row* row1 = create_row(table1);
+
+    char* names[10] = {"Nastya", "Dasha", "Dima", "Karina", "Oleg", "Gleb", "Masha", "Olya", "Anonim", "Yurij"};
+    uint32_t ages[7] = {10, 20, 16, 13, 40, 32, 19};
+    bool sexes[2] = {true, false};
+    uint32_t colors[6] = {1,2,3,4,5,6};
+
+    char* my_name = "Dasha";
+    char* column[1] = {"name"};
+    void* value[1] = {&my_name};
+    struct query* select_query = create_query(SELECT_WHERE, table1, column, value, -1);
+
+    clock_t begin;
+    clock_t end;
+    double time_spent = 0.0;
+
+    for (size_t j=0; j<10; j++) {
+        for (size_t i=0; i<1000; i++) { 
+            fill_row_attribute(row1, "name", TYPE_STRING, (void*) &names[i%10]);
+            fill_row_attribute(row1, "age", TYPE_INT32, (void*) &ages[i%7]);
+            fill_row_attribute(row1, "male", TYPE_BOOL, (void*) &sexes[i%2]);
+            fill_row_attribute(row1, "eye_color", TYPE_INT32, (void*) &colors[i%6]);
+            insert_row_to_table(row1);
+        } 
+        my_name = names[j%10];
+        begin = clock();
+        run_query(select_query);
+        end = clock();
+        time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+        printf("Поиск по %d строк занял %f секунд\n", 1000*(j+1), time_spent);
+    }
+
+    close_database(my_db);
+    close_row(row1);
+    close_schema(first_schema);
+    close_query(select_query);
+}
+
+void test_update() {
+    printf("TEST UPDATE");
+
+    struct database* my_db = get_prepared_database("db_update.bin", TO_BE_CREATED);
+
+    struct table_schema* first_schema = create_table_schema();
+    first_schema = add_string_column_to_schema(first_schema, "name", TYPE_STRING, 20);
+    first_schema = add_column_to_schema(first_schema, "age", TYPE_INT32);
+    first_schema = add_column_to_schema(first_schema, "male", TYPE_BOOL);
+    first_schema = add_column_to_schema(first_schema, "eye_color", TYPE_INT32);
+
+    struct table* table1 = create_table_from_schema(first_schema, "people", my_db);
+
+    struct row* row1 = create_row(table1);
+
+    char* names[10] = {"Nastya", "Dasha", "Dima", "Karina", "Oleg", "Gleb", "Masha", "Olya", "Anonim", "Yurij"};
+    uint32_t ages[7] = {10, 20, 16, 13, 40, 32, 19};
+    bool sexes[2] = {true, false};
+    uint32_t colors[6] = {1,2,3,4,5,6};
+
+    char* my_name = "Dasha";
+    uint32_t new_age = 0;
+    char* columns[2] = {"name", "age"};
+    void* values[2] = {&my_name, &new_age};
+
+    struct query* update_query = create_query(UPDATE_WHERE, table1, columns, values, -1);
+
+    clock_t begin;
+    clock_t end;
+    double time_spent = 0.0;
+
+    for (size_t j=0; j<10; j++) {
+        for (size_t i=0; i<1000; i++) { 
+            fill_row_attribute(row1, "name", TYPE_STRING, (void*) &names[i%10]);
+            fill_row_attribute(row1, "age", TYPE_INT32, (void*) &ages[i%7]);
+            fill_row_attribute(row1, "male", TYPE_BOOL, (void*) &sexes[i%2]);
+            fill_row_attribute(row1, "eye_color", TYPE_INT32, (void*) &colors[i%6]);
+            insert_row_to_table(row1);
+        } 
+        my_name = names[j%10];
+        new_age = ages[(j+2)%7];
+
+        begin = clock();
+        run_query(update_query);
+        end = clock();
+
+        time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+        printf("Обновление среди %d строк заняло %f секунд\n", 1000*(j+1), time_spent);
+    }
+
+    close_database(my_db);
+    close_row(row1);
+    close_schema(first_schema);
+    close_query(update_query);
+}
+
+void test_delete() {
+    printf("TEST DELETE");
+
+    struct database* my_db = get_prepared_database("db_delete.bin", TO_BE_CREATED);
+
+    struct table_schema* first_schema = create_table_schema();
+    first_schema = add_string_column_to_schema(first_schema, "name", TYPE_STRING, 20);
+    first_schema = add_column_to_schema(first_schema, "age", TYPE_INT32);
+    first_schema = add_column_to_schema(first_schema, "male", TYPE_BOOL);
+    first_schema = add_column_to_schema(first_schema, "eye_color", TYPE_INT32);
+
+    struct table* table1 = create_table_from_schema(first_schema, "people", my_db);
+
+    struct row* row1 = create_row(table1);
+
+    char* names[10] = {"Nastya", "Dasha", "Dima", "Karina", "Oleg", "Gleb", "Masha", "Olya", "Anonim", "Yurij"};
+    uint32_t ages[7] = {10, 20, 16, 13, 40, 32, 19};
+    bool sexes[2] = {true, false};
+    uint32_t colors[6] = {1,2,3,4,5,6};
+
+    uint32_t my_age = 0;
+    char* column[1] = {"age"};
+    void* value[1] = {&my_age};
+
+    struct query* delete_query = create_query(DELETE_WHERE, table1, column, value, -1);
+
+    clock_t begin;
+    clock_t end;
+    double time_spent = 0.0;
+
+    for (size_t j=0; j<10; j++) {
+        for (size_t i=0; i<1000; i++) { 
+            fill_row_attribute(row1, "name", TYPE_STRING, (void*) &names[i%10]);
+            fill_row_attribute(row1, "age", TYPE_INT32, (void*) &ages[i%7]);
+            fill_row_attribute(row1, "male", TYPE_BOOL, (void*) &sexes[i%2]);
+            fill_row_attribute(row1, "eye_color", TYPE_INT32, (void*) &colors[i%6]);
+            insert_row_to_table(row1);
+        } 
+        my_age = ages[(j+3)%7];
+
+        begin = clock();
+        run_query(delete_query);
+        end = clock();
+
+        time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+        printf("Удаление среди %d строк заняло %f секунд\n", 1000*(j+1), time_spent);
+    }
+
+    close_database(my_db);
+    close_row(row1);
+    close_schema(first_schema);
+    close_query(delete_query);
 }
 
 int main(int argc, char** argv) {
-    write_db();
-    read_db();
+    test_insert();
+    //test_select();
+    //test_update();
+    //test_delete();
+    // write_db();
+    // read_db();
     return 0;
 }
+
 

@@ -167,3 +167,7 @@ struct table_schema* delete_column_from_schema(struct table_schema* schema, cons
     }
 }
 
+void close_schema(struct table_schema* schema) {
+    destroy_column_list(schema->columns);
+    free(schema);
+}
