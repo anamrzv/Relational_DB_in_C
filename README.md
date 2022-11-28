@@ -368,6 +368,7 @@ int32_t column_offset(const struct column* column_list, const size_t len, char* 
 ![image](https://user-images.githubusercontent.com/79102850/204132185-6e87e3e9-fb41-4ec7-b87b-208257bf197c.png)
 
 Запуск на Windows и *NIX
+
 0. Установить утилиту make
 1. Перейти в корень проекта
 2. Выбрать нужный Makefile. Если это Windows, убрать расширение в названии файла. Удалить лишний файл.
