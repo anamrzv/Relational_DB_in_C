@@ -88,6 +88,8 @@ void write_db() {
     close_row(row1);
     close_schema(first_schema);
     close_schema(second_schema);
+    close_table(table1);
+    close_table(table2);
 }
 
 void read_db() {
@@ -191,6 +193,8 @@ void read_db() {
     close_query(select_query_5);
     close_query(select_query_6);
     close_join_query(select_query_7);
+    close_table(my_first_table);
+    close_table(my_second_table);
 }
 
 void test_insert() {
@@ -237,6 +241,7 @@ void test_insert() {
     close_database(my_db);
     close_row(row1);
     close_schema(first_schema);
+    close_table(table1);
 }
 
 void test_select() {
@@ -288,6 +293,7 @@ void test_select() {
     close_row(row1);
     close_schema(first_schema);
     close_query(select_query);
+    close_table(table1);
 }
 
 void test_update() {
@@ -344,6 +350,7 @@ void test_update() {
     close_row(row1);
     close_schema(first_schema);
     close_query(update_query);
+    close_table(table1);
 }
 
 void test_delete() {
@@ -398,15 +405,16 @@ void test_delete() {
     close_row(row1);
     close_schema(first_schema);
     close_query(delete_query);
+    close_table(table1);
 }
 
 int main(int argc, char** argv) {
-    test_insert();
+    //test_insert();
     //test_select();
     //test_update();
     //test_delete();
-    // write_db();
-    // read_db();
+     write_db();
+     read_db();
     return 0;
 }
 

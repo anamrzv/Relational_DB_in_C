@@ -22,6 +22,6 @@ exec:
 	./main
 
 clean:
-	rm main.o table_schema.o table_content.o file.o db.o; \
+	rm -f *.o; \
 	rm main.exe
 	

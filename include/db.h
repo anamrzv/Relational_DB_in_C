@@ -63,6 +63,7 @@ bool enough_free_space(struct page_header* page_header, uint32_t desired_volume)
 void close_database(struct database* db);
 
 struct table* get_table(const char *const tablename, struct database* db);
+void close_table(struct table* table);
 
 struct query* create_query(enum query_type type, struct table* tables, char* column[], void* values[], int32_t row_count);
 struct query_join* create_query_join(struct table* left_table, struct table* right_table, char* left_column, char* right_column);

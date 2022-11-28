@@ -1,27 +1,27 @@
 all: main
 
-main: main.obj table_schema.obj table_content.obj file.obj db.obj
-	cl main.obj table_schema.obj table_content.obj file.obj db.obj -o main.exe
+main: main.o table_schema.o table_content.o file.o db.o
+	gcc main.o table_schema.o table_content.o file.o db.o -o main
 
-main.obj:
-	cl -c src/main.c
+main.o:
+	gcc -c src/main.c
 
-table_schema.obj: 
-	cl -c src/table_schema.c
+table_schema.o: 
+	gcc -c src/table_schema.c
 
-table_content.obj:
-	cl -c src/table_content.c
+table_content.o:
+	gcc -c src/table_content.c
 
-file.obj:
-	cl -c src/file.c
+file.o:
+	gcc -c src/file.c
 
-db.obj:
-	cl -c src/db.c
+db.o:
+	gcc -c src/db.c
 
 exec:
-	start main.exe
+	./main
 
 clean:
-	del *.obj \
+	del -rf *.o; \
 	del main.exe
 	
