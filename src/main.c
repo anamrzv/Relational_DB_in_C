@@ -408,13 +408,98 @@ void test_delete() {
     close_table(table1);
 }
 
+void test_join() {
+    struct database* my_db = get_prepared_database("db_join.bin", TO_BE_CREATED);
+
+    struct table_schema* first_schema = create_table_schema();
+    first_schema = add_string_column_to_schema(first_schema, "name", TYPE_STRING, 20);
+    first_schema = add_column_to_schema(first_schema, "age", TYPE_INT32);
+    first_schema = add_column_to_schema(first_schema, "male", TYPE_BOOL);
+    first_schema = add_column_to_schema(first_schema, "eye_color", TYPE_INT32);
+
+    struct table_schema* second_schema = create_table_schema();
+    second_schema = add_column_to_schema(second_schema, "id", TYPE_INT32);
+    second_schema = add_string_column_to_schema(second_schema, "color", TYPE_STRING, 20);
+
+    struct table* table1 = create_table_from_schema(first_schema, "people", my_db);
+    struct table* table2 = create_table_from_schema(second_schema, "colors", my_db);
+
+    struct row* colors_row = create_row(table2);
+    uint32_t eye_id = 1;
+    char* color = "blue";
+    fill_row_attribute(colors_row, "id", TYPE_INT32, (void*) &eye_id);
+    fill_row_attribute(colors_row, "color", TYPE_STRING, (void*) &color);
+    insert_row_to_table(colors_row);
+
+    eye_id = 2;
+    color = "grey";
+    fill_row_attribute(colors_row, "id", TYPE_INT32, (void*) &eye_id);
+    fill_row_attribute(colors_row, "color", TYPE_STRING, (void*) &color);
+    insert_row_to_table(colors_row);
+
+    eye_id = 3;
+    color = "green";
+    fill_row_attribute(colors_row, "id", TYPE_INT32, (void*) &eye_id);
+    fill_row_attribute(colors_row, "color", TYPE_STRING, (void*) &color);
+    insert_row_to_table(colors_row);
+
+    eye_id = 4;
+    color = "brown";
+    fill_row_attribute(colors_row, "id", TYPE_INT32, (void*) &eye_id);
+    fill_row_attribute(colors_row, "color", TYPE_STRING, (void*) &color);
+    insert_row_to_table(colors_row);
+
+    eye_id = 5;
+    color = "black";
+    fill_row_attribute(colors_row, "id", TYPE_INT32, (void*) &eye_id);
+    fill_row_attribute(colors_row, "color", TYPE_STRING, (void*) &color);
+    insert_row_to_table(colors_row);
+
+    clock_t begin;
+    clock_t end;
+    double time_spent = 0.0;
+    char* names[10] = {"Nastya", "Dasha", "Dima", "Karina", "Oleg", "Gleb", "Masha", "Olya", "Anonim", "Yurij"};
+    uint32_t ages[7] = {10, 20, 16, 13, 40, 32, 19};
+    bool sexes[2] = {true, false};
+    uint32_t colors[6] = {1,2,3,4,5,6};
+    struct query_join* join_query = create_query_join(table1, table2, "eye_color", "id");
+
+    struct row* row1 = create_row(table1);
+    for (size_t j=0; j<10; j++) {
+        for (size_t i=0; i<1000; i++) { 
+            fill_row_attribute(row1, "name", TYPE_STRING, (void*) &names[i%10]);
+            fill_row_attribute(row1, "age", TYPE_INT32, (void*) &ages[i%7]);
+            fill_row_attribute(row1, "male", TYPE_BOOL, (void*) &sexes[i%2]);
+            fill_row_attribute(row1, "eye_color", TYPE_INT32, (void*) &colors[i%6]);
+            insert_row_to_table(row1);
+        } 
+
+        begin = clock();
+        run_join_query(join_query);
+        end = clock();
+
+        time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+        printf("Join среди %d строк занял %f секунд\n", 1000*(j+1), time_spent);
+    }
+
+    close_database(my_db);
+    close_row(row1);
+    close_row(colors_row);
+    close_schema(first_schema);
+    close_schema(second_schema);
+    close_join_query(join_query);
+    close_table(table1);
+    close_table(table2);
+}
+
 int main(int argc, char** argv) {
     //test_insert();
     //test_select();
     //test_update();
     //test_delete();
-     write_db();
-     read_db();
+    test_join();
+    // write_db();
+    // read_db();
     return 0;
 }
 
