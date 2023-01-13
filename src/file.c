@@ -752,9 +752,3 @@ void join(FILE *file, struct table* left_table, struct table* right_table, struc
     printf("Всего %d строк\n", joined_count);
 
 }
-
-long int getDBSize(FILE* file) {
-
-    fseek(file, 0, SEEK_END);
-    return ftell(file);
-}

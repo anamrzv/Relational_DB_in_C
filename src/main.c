@@ -233,9 +233,7 @@ void test_insert() {
         }
         end = clock();
         time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-        long int file_size = getDBSize(my_db->database_file);
         printf("Вставка %d строк заняла %f секунд\n", 1000*j, time_spent);
-        printf("Размер файла %d байт\n", file_size);
     }
 
     close_database(my_db);
@@ -545,21 +543,68 @@ void test_join2() {
     close_database(my_db);
     close_row(row1);
     close_row(row2);
-    // close_schema(first_schema);
-    // close_schema(second_schema);
-    // close_join_query(join_query);
-    // close_table(table1);
-    // close_table(table2);
+    close_schema(first_schema);
+    close_schema(second_schema);
+    close_join_query(join_query);
+    close_table(table1);
+    close_table(table2);
 }
+
+long int getDBSize(struct database* db) {
+    fseek(db->database_file, 0, SEEK_END);
+    return ftell(db->database_file);
+}
+
+void test_file_size() {
+    struct database* my_db = get_prepared_database("db_dize.bin", TO_BE_CREATED);
+
+    struct table_schema* first_schema = create_table_schema();
+    first_schema = add_string_column_to_schema(first_schema, "name", TYPE_STRING, 20);
+    first_schema = add_column_to_schema(first_schema, "age", TYPE_INT32);
+    first_schema = add_column_to_schema(first_schema, "male", TYPE_BOOL);
+    first_schema = add_string_column_to_schema(first_schema, "partner_name", TYPE_STRING, 20);
+
+    struct table* table1 = create_table_from_schema(first_schema, "students", my_db);
+
+    clock_t begin;
+    clock_t end;
+    double time_spent = 0.0;
+    char* names[10] = {"Nastya", "Dasha", "Dima", "Karina", "Oleg", "Gleb", "Masha", "Olya", "Anonim", "Yurij"};
+    char* partners_names[10] = {"Anastasia", "Daria", "Dmitry", "Alexander", "Kirill", "Egor", "Maria", "Olga", "Anonimus", "Sergeyyy"};
+
+    uint32_t ages[7] = {10, 20, 16, 13, 40, 32, 19};
+    bool sexes[2] = {true, false};
+
+    struct row* row1 = create_row(table1);
+    for (size_t j=0; j<10; j++) {
+        for (size_t i=0; i<1000; i++) { 
+            fill_row_attribute(row1, "name", TYPE_STRING, (void*) &names[i%10]);
+            fill_row_attribute(row1, "age", TYPE_INT32, (void*) &ages[i%7]);
+            fill_row_attribute(row1, "male", TYPE_BOOL, (void*) &sexes[i%2]);
+            fill_row_attribute(row1, "partner_name", TYPE_STRING, (void*) &partners_names[i%10]);
+            insert_row_to_table(row1);
+        } 
+
+        printf("Размер файла в %d строк занял %d байт\n", 1000*(j+1), getDBSize(my_db));
+    }
+
+    close_database(my_db);
+    close_row(row1);
+    close_schema(first_schema);
+    close_table(table1);
+}
+
+
 
 int main(int argc, char** argv) {
     //test_insert();
     //test_select();
     //test_update();
     //test_delete();
-    test_join2();
+    //test_join2();
     // write_db();
     // read_db();
+    test_file_size();
     return 0;
 }
 
