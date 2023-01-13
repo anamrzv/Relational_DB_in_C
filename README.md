@@ -373,6 +373,10 @@ int32_t column_offset(const struct column* column_list, const size_t len, char* 
 
 ![image](https://user-images.githubusercontent.com/79102850/204132185-6e87e3e9-fb41-4ec7-b87b-208257bf197c.png)
 
+График зависимости размера файла от количества записей в таблице
+![image](https://user-images.githubusercontent.com/79102850/212294995-32d9bd4a-aa47-4660-8958-3a5975bd085f.png)
+
+
 Запуск на Windows и *NIX
 
 0. Установить утилиту make
